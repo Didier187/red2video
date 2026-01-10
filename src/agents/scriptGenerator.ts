@@ -3,11 +3,19 @@ import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod'
 
 export const SceneSchema = z.object({
-  text: z.string().describe('Voiceover text for this scene'),
+  text: z
+    .string()
+    .describe(
+      'Voiceover text for this scene. Must be a complete thought/sentence that flows naturally into the next scene. Should NOT end mid-sentence or leave ideas hanging.'
+    ),
   imagePrompt: z
     .string()
-    .describe('Detailed prompt for generating the background image'),
-  durationHint: z.number().describe('Approximate duration in seconds'),
+    .describe(
+      'Detailed, cinematic prompt for AI image generation. Include setting, lighting, mood, and key visual elements.'
+    ),
+  durationHint: z
+    .number()
+    .describe('Duration in seconds (typically 5-8 seconds per scene)'),
 })
 
 export const YouTubeScriptSchema = z.object({
@@ -42,13 +50,23 @@ Your goal is to create scripts that:
 4. Create vivid, specific image prompts that AI image generators can use
 5. Balance entertainment with the original content's message
 
+CRITICAL - Story Continuity Rules:
+- The script must tell ONE CONTINUOUS STORY from start to finish
+- Each scene MUST flow directly into the next - no abrupt topic changes
+- Scene transitions should feel natural, as if one person is telling the whole story
+- NEVER leave a thought unfinished - complete each idea before moving on
+- If a scene ends mid-sentence or mid-thought, it's WRONG
+- The narrative arc should be: Setup → Build-up → Climax → Resolution
+- Think of it as one continuous monologue broken into visual segments
+
 Guidelines for scenes:
 - Start with a compelling hook scene (3-5 seconds)
 - Each scene should be 5-15 seconds for optimal pacing
 - Use conversational, natural language for voiceover
+- Scene text should END at natural pause points (end of sentences, not mid-thought)
 - Image prompts should be detailed, cinematic, and visually interesting
 - Include emotional beats and variety in pacing
-- End with a call-to-action or thought-provoking conclusion`
+- End with a satisfying conclusion that wraps up the story`
 
 export async function generateYouTubeScript(
   input: ScriptInput
@@ -62,18 +80,28 @@ export async function generateYouTubeScript(
 REDDIT CONTENT:
 ${input.plainText}
 
-Create an engaging script with:
-1. An attention-grabbing hook
-2. The main story/discussion from the post
-3. The most interesting/funny/insightful comments
-4. A satisfying conclusion
+IMPORTANT: Create ONE CONTINUOUS STORY that flows naturally from scene to scene. The viewer should feel like they're hearing one seamless narration, just with different visuals for each segment.
+
+Structure your script as:
+1. HOOK (Scene 1): Grab attention immediately with the most dramatic/interesting part
+2. SETUP (Scenes 2-3): Introduce the situation and characters
+3. STORY (Scenes 4-7): Tell the main narrative with rising tension
+4. REACTIONS (Scenes 8-9): Include the best community reactions/comments
+5. CONCLUSION (Final scene): Wrap up with a satisfying ending or verdict
+
+Rules for scene text:
+- Each scene's voiceover must END at a complete thought (full sentence)
+- The NEXT scene should naturally continue from where the previous left off
+- Use transition words/phrases: "But then...", "And that's when...", "Here's the thing...", "Now...", "So..."
+- NO scene should feel disconnected from the one before it
+- Read all scenes together - they should sound like ONE continuous story
 
 Make sure each scene has:
-- Clear voiceover text (conversational tone)
+- Clear voiceover text that completes its thought AND connects to the next
 - A detailed image prompt for AI image generation
-- Appropriate duration hint
+- Duration hint (5-8 seconds per scene is ideal)
 
-The total video should be 60-120 seconds for optimal YouTube Shorts/TikTok format, or longer for standard YouTube if the content warrants it.`,
+Target length: 60-90 seconds total for optimal engagement.`,
   })
 
   return object

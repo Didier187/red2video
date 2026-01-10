@@ -1,10 +1,8 @@
 import React from 'react'
-import { AbsoluteFill, Img, Audio, useCurrentFrame, useVideoConfig, interpolate, staticFile } from 'remotion'
+import { AbsoluteFill, Img, Audio, useCurrentFrame, useVideoConfig, interpolate } from 'remotion'
 
 interface SceneProps {
   text: string
-  imagePath?: string
-  audioPath?: string
   imageDataUrl?: string
   audioDataUrl?: string
   durationInFrames: number
@@ -39,25 +37,13 @@ export const Scene: React.FC<SceneProps> = ({
     extrapolateRight: 'clamp',
   })
 
-  // Get the proper URL for the media - if it starts with /, use staticFile
-  const getMediaUrl = (path: string | undefined) => {
-    if (!path) return undefined
-    if (path.startsWith('/')) {
-      return staticFile(path)
-    }
-    return path
-  }
-
-  const imageSrc = getMediaUrl(imageDataUrl)
-  const audioSrc = getMediaUrl(audioDataUrl)
-
   return (
     <AbsoluteFill style={{ backgroundColor: '#0a0a0a' }}>
       {/* Background Image */}
-      {imageSrc && (
+      {imageDataUrl && (
         <AbsoluteFill style={{ opacity }}>
           <Img
-            src={imageSrc}
+            src={imageDataUrl}
             style={{
               width: '100%',
               height: '100%',
@@ -111,7 +97,7 @@ export const Scene: React.FC<SceneProps> = ({
       </AbsoluteFill>
 
       {/* Audio */}
-      {audioSrc && <Audio src={audioSrc} />}
+      {audioDataUrl && <Audio src={audioDataUrl} />}
     </AbsoluteFill>
   )
 }

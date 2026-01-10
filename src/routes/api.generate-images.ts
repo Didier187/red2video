@@ -52,8 +52,9 @@ export const Route = createFileRoute('/api/generate-images')({
             imagePath: img.filePath,
           }))
 
-          // Merge with existing media if present
-          const existingMedia = storedScript.media?.scenes || []
+          // Re-fetch script to get latest media state (in case audio was generated during image generation)
+          const latestScript = await getScript(body.scriptId)
+          const existingMedia = latestScript?.media?.scenes || []
           const mergedMedia = storedScript.script.scenes.map((_, i) => ({
             ...existingMedia[i],
             ...sceneMedia[i],
