@@ -3,11 +3,11 @@ import path from 'path'
 import { randomUUID } from 'crypto'
 
 const STORE_DIR = path.join(process.cwd(), '.script-store')
-const MEDIA_DIR = path.join(process.cwd(), '.media-store')
 
 export interface SceneMedia {
   audioPath?: string
   imagePath?: string
+  duration?: number
 }
 
 export interface StoredScript {
@@ -43,7 +43,7 @@ async function ensureStoreDir(): Promise<void> {
 
 export async function saveScript(
   script: StoredScript['script'],
-  redditUrl?: string
+  redditUrl?: string,
 ): Promise<string> {
   await ensureStoreDir()
 
@@ -74,7 +74,7 @@ export async function getScript(id: string): Promise<StoredScript | null> {
 
 export async function updateScript(
   id: string,
-  updates: Partial<Omit<StoredScript, 'id' | 'createdAt'>>
+  updates: Partial<Omit<StoredScript, 'id' | 'createdAt'>>,
 ): Promise<boolean> {
   const existing = await getScript(id)
   if (!existing) return false
@@ -115,7 +115,8 @@ export async function listScripts(): Promise<StoredScript[]> {
     }
 
     return scripts.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     )
   } catch {
     return []

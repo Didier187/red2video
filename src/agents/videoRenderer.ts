@@ -117,12 +117,17 @@ export async function renderVideo(options: VideoRenderOptions): Promise<VideoRen
   console.log('Bundle complete...')
   progressStore.set(scriptId, { progress: 15, stage: 'composing' })
 
-  // Calculate duration
+  // Calculate duration - prefer actual audio duration over durationHint
   const titleDuration = 4
-  const scenesDuration = scenes.reduce((acc, scene) => acc + scene.durationHint, 0)
+  const scenesDuration = scenes.reduce((acc, scene) => {
+    // Use actual audio duration if available, otherwise fall back to durationHint
+    const sceneDuration = scene.duration ?? scene.durationHint
+    return acc + sceneDuration
+  }, 0)
   const totalDuration = titleDuration + scenesDuration
   const durationInFrames = Math.round(totalDuration * qualitySettings.fps)
 
+  console.log(`Video duration: ${totalDuration.toFixed(2)}s (title: ${titleDuration}s, scenes: ${scenesDuration.toFixed(2)}s)`)
   console.log('Selecting composition...')
 
   // Select the composition

@@ -38,11 +38,13 @@ export const Route = createFileRoute('/api/render-video')({
             )
           }
 
-          // Prepare scenes with media paths
+          // Prepare scenes with media paths and actual audio duration
           const scenesWithMedia = storedScript.script.scenes.map((scene, i) => ({
             ...scene,
             imagePath: storedScript.media?.scenes[i]?.imagePath,
             audioPath: storedScript.media?.scenes[i]?.audioPath,
+            // Use actual audio duration if available (more accurate than durationHint)
+            duration: storedScript.media?.scenes[i]?.duration,
           }))
 
           const result: VideoRenderResult = await renderVideo({

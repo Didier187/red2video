@@ -35,16 +35,20 @@ export const Route = createFileRoute('/api/generate-audio')({
             if (!storedScript) {
               return Response.json(
                 { error: `Script not found: ${scriptId}` },
-                { status: 404 }
+                { status: 404 },
               )
             }
             scenes = storedScript.script.scenes
-          } else if (body.scenes && Array.isArray(body.scenes) && body.scenes.length > 0) {
+          } else if (
+            body.scenes &&
+            Array.isArray(body.scenes) &&
+            body.scenes.length > 0
+          ) {
             scenes = body.scenes
           } else {
             return Response.json(
               { error: 'Missing scriptId or scenes array' },
-              { status: 400 }
+              { status: 400 },
             )
           }
 
@@ -54,7 +58,7 @@ export const Route = createFileRoute('/api/generate-audio')({
               voice: body.voice,
               model: body.model,
               speed: body.speed,
-            }
+            },
           )
 
           // Save audio files to disk if scriptId is provided
@@ -64,10 +68,17 @@ export const Route = createFileRoute('/api/generate-audio')({
 
             // Get existing script to preserve image paths
             const existingScript = await getScript(scriptId)
-            const existingScenes = existingScript?.media?.scenes || []
+            if (!existingScript) {
+              return Response.json(
+                { error: `Script not found: ${scriptId}` },
+                { status: 404 },
+              )
+            }
+            const existingScenes = existingScript.media?.scenes || []
 
-            // Build a map of audio paths by scene index
+            // Build a map of audio paths and durations by scene index
             const audioPathsMap: Record<number, string> = {}
+            const audioDurationsMap: Record<number, number> = {}
 
             for (const audio of result.audios) {
               const sceneNum = String(audio.sceneIndex + 1).padStart(2, '0')
@@ -75,19 +86,34 @@ export const Route = createFileRoute('/api/generate-audio')({
               const buffer = Buffer.from(audio.audioBase64, 'base64')
               await fs.writeFile(filePath, buffer)
               console.log(`Saved audio for scene ${sceneNum}`)
+              console.log(
+                `Scene ${sceneNum} audio duration: ${(audio.duration ?? 0).toFixed(2)}s`,
+              )
+
               audioPathsMap[audio.sceneIndex] = filePath
+              audioDurationsMap[audio.sceneIndex] = audio.duration ?? 0
             }
 
-            // Merge with existing media - preserve all existing data and add audio paths
+            // Merge with existing media - preserve all existing data and add audio paths and durations
             const mergedScenes = scenes.map((_, i) => ({
               ...existingScenes[i],
               audioPath: audioPathsMap[i],
+              duration: audioDurationsMap[i],
             }))
 
-            // Mark script as having audio generated and update media paths
+            const totalDuration = Object.values(audioDurationsMap).reduce(
+              (sum, d) => sum + d,
+              0,
+            )
+
+            // Mark script as having audio generated and update media paths and durations
             await updateScript(scriptId, {
               audioGenerated: true,
               media: { scenes: mergedScenes },
+              script: {
+                ...existingScript.script,
+                totalDuration,
+              },
             })
           }
 
@@ -96,7 +122,7 @@ export const Route = createFileRoute('/api/generate-audio')({
           console.error('Audio generation error:', error)
           return Response.json(
             { error: `Failed to generate audio: ${error}` },
-            { status: 500 }
+            { status: 500 },
           )
         }
       },

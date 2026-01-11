@@ -29,13 +29,84 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'red2video - Convert Reddit Posts to Videos',
+      },
+      {
+        name: 'description',
+        content:
+          'Transform Reddit posts into engaging videos with AI-generated TTS audio and images. Create viral content in minutes.',
+      },
+      {
+        name: 'theme-color',
+        content: '#6366f1',
+      },
+      {
+        property: 'og:title',
+        content: 'red2video - Convert Reddit Posts to Videos',
+      },
+      {
+        property: 'og:description',
+        content:
+          'Transform Reddit posts into engaging videos with AI-generated TTS audio and images.',
+      },
+      {
+        property: 'og:type',
+        content: 'website',
+      },
+      {
+        property: 'og:url',
+        content: 'https://red2video.app',
+      },
+      {
+        property: 'og:site_name',
+        content: 'red2video',
+      },
+      {
+        property: 'og:image',
+        content: 'https://red2video.app/og-image.png',
+      },
+      {
+        name: 'twitter:card',
+        content: 'summary_large_image',
+      },
+      {
+        name: 'twitter:site',
+        content: '@red2video',
+      },
+      {
+        name: 'twitter:title',
+        content: 'red2video - Convert Reddit Posts to Videos',
+      },
+      {
+        name: 'twitter:description',
+        content:
+          'Transform Reddit posts into engaging videos with AI-generated TTS audio and images.',
+      },
+      {
+        name: 'twitter:image',
+        content: 'https://red2video.app/og-image.png',
       },
     ],
     links: [
       {
         rel: 'stylesheet',
         href: appCss,
+      },
+      {
+        rel: 'icon',
+        href: '/favicon.ico',
+      },
+      {
+        rel: 'apple-touch-icon',
+        href: '/logo192.png',
+      },
+      {
+        rel: 'manifest',
+        href: '/manifest.json',
+      },
+      {
+        rel: 'canonical',
+        href: 'https://red2video.app',
       },
     ],
   }),

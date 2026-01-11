@@ -27,7 +27,9 @@ export const RedditVideo = ({ title, scenes }: VideoProps) => {
 
       {/* Scenes */}
       {scenes.map((scene, index) => {
-        const durationInFrames = Math.round(scene.durationHint * FPS)
+        // Use actual audio duration if available, otherwise fall back to durationHint
+        const sceneDuration = scene.duration ?? scene.durationHint
+        const durationInFrames = Math.round(sceneDuration * FPS)
         const startFrame = currentFrame
 
         currentFrame += durationInFrames
@@ -47,9 +49,12 @@ export const RedditVideo = ({ title, scenes }: VideoProps) => {
   )
 }
 
-// Calculate total duration from scenes
+// Calculate total duration from scenes - prefer actual audio duration
 function calculateTotalDuration(scenes: SceneData[]): number {
-  const scenesDuration = scenes.reduce((acc, scene) => acc + scene.durationHint, 0)
+  const scenesDuration = scenes.reduce((acc, scene) => {
+    // Use actual audio duration if available, otherwise fall back to durationHint
+    return acc + (scene.duration ?? scene.durationHint)
+  }, 0)
   return Math.round((TITLE_DURATION_SECONDS + scenesDuration) * FPS)
 }
 

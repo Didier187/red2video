@@ -2,6 +2,8 @@ export interface SceneData {
   text: string
   imagePrompt: string
   durationHint: number
+  // Actual duration derived from audio file (preferred over durationHint)
+  duration?: number
   imagePath?: string
   audioPath?: string
   // Base64 encoded data URLs for Remotion rendering
