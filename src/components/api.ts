@@ -82,15 +82,16 @@ export async function generateVoiceSample(voice: Voice): Promise<string> {
   return data.audios[0].audioBase64
 }
 
-export async function generateImages(
-  scriptId: string,
-): Promise<ImageGenerationResult> {
+export async function generateImages(params: {
+  scriptId: string
+  imageSize?: '1792x1024' | '1024x1792' | '1024x1024'
+}): Promise<ImageGenerationResult> {
   const res = await fetch('/api/generate-images', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      scriptId,
-      size: '1792x1024',
+      scriptId: params.scriptId,
+      size: params.imageSize || '1792x1024',
       quality: 'standard',
       style: 'vivid',
     }),
@@ -104,11 +105,21 @@ export async function generateImages(
   return data
 }
 
-export async function renderVideo(scriptId: string): Promise<VideoRenderResult> {
+export async function renderVideo(params: {
+  scriptId: string
+  videoWidth?: number
+  videoHeight?: number
+}): Promise<VideoRenderResult> {
   const res = await fetch('/api/render-video', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ scriptId, quality: 'medium', outputFormat: 'mp4' }),
+    body: JSON.stringify({
+      scriptId: params.scriptId,
+      quality: 'medium',
+      outputFormat: 'mp4',
+      width: params.videoWidth,
+      height: params.videoHeight,
+    }),
   })
   const data: VideoRenderResult | ApiError = await res.json()
 

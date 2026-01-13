@@ -62,3 +62,41 @@ export interface ApiError {
 export type Voice = 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'
 
 export type StepStatus = 'pending' | 'active' | 'completed'
+
+export type AspectRatio = '16:9' | '9:16' | '1:1'
+
+export interface AspectRatioConfig {
+  label: string
+  description: string
+  imageSize: '1792x1024' | '1024x1792' | '1024x1024'
+  videoWidth: number
+  videoHeight: number
+  icon: string
+}
+
+export const ASPECT_RATIO_CONFIGS: Record<AspectRatio, AspectRatioConfig> = {
+  '16:9': {
+    label: 'Landscape',
+    description: 'YouTube, Desktop',
+    imageSize: '1792x1024',
+    videoWidth: 1920,
+    videoHeight: 1080,
+    icon: '🖥️',
+  },
+  '9:16': {
+    label: 'Portrait',
+    description: 'TikTok, Reels, Shorts',
+    imageSize: '1024x1792',
+    videoWidth: 1080,
+    videoHeight: 1920,
+    icon: '📱',
+  },
+  '1:1': {
+    label: 'Square',
+    description: 'Instagram, Facebook',
+    imageSize: '1024x1024',
+    videoWidth: 1080,
+    videoHeight: 1080,
+    icon: '⬜',
+  },
+}

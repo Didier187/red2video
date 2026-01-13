@@ -6,6 +6,8 @@ interface VideoRenderRequest {
   scriptId: string
   quality?: 'low' | 'medium' | 'high'
   outputFormat?: 'mp4' | 'webm'
+  width?: number
+  height?: number
 }
 
 export const Route = createFileRoute('/api/render-video')({
@@ -53,6 +55,8 @@ export const Route = createFileRoute('/api/render-video')({
             scenes: scenesWithMedia,
             quality: body.quality,
             outputFormat: body.outputFormat,
+            width: body.width,
+            height: body.height,
           })
 
           // Update script with video info

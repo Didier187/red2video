@@ -1,9 +1,26 @@
+import { Skeleton, SkeletonText } from './Skeleton'
+
 interface UrlInputStepProps {
   inputUrl: string
   onInputChange: (value: string) => void
   onSubmit: (e: React.FormEvent) => void
   isLoading: boolean
   error: Error | null
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="mt-6 pt-6 border-t border-[#e2e2e2] dark:border-[#444]">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="animate-spin w-5 h-5 border-2 border-[#85d7ff] border-t-transparent rounded-full" />
+        <span className="text-sm text-[#666] dark:text-[#aaa]">Fetching Reddit post...</span>
+      </div>
+      <Skeleton className="h-5 w-48 mb-3" />
+      <Skeleton className="h-7 w-3/4 mb-4" />
+      <SkeletonText lines={2} />
+      <Skeleton className="h-4 w-32 mt-4" />
+    </div>
+  )
 }
 
 export function UrlInputStep({
@@ -38,6 +55,7 @@ export function UrlInputStep({
       {error && (
         <p className="text-[#ff6e41] text-sm mt-4">{error.message}</p>
       )}
+      {isLoading && <LoadingSkeleton />}
     </div>
   )
 }

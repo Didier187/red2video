@@ -5,6 +5,9 @@ import {
   type Voice,
   type StepStatus,
   type ImageStatusResponse,
+  type YouTubeScript,
+  type AspectRatio,
+  ASPECT_RATIO_CONFIGS,
   getRedditPost,
   generateScript,
   generateAudio,
@@ -32,6 +35,7 @@ function App() {
   const [inputUrl, setInputUrl] = useState('')
   const [submittedUrl, setSubmittedUrl] = useState('')
   const [selectedVoice, setSelectedVoice] = useState<Voice>('nova')
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('16:9')
   const [voiceSamples, setVoiceSamples] = useState<Record<string, string>>({})
   const [loadingSample, setLoadingSample] = useState<Voice | null>(null)
   const [playingVoice, setPlayingVoice] = useState<Voice | null>(null)
@@ -174,13 +178,22 @@ function App() {
 
   const handleGenerateImages = () => {
     if (scriptMutation.data) {
-      imageMutation.mutate(scriptMutation.data.id)
+      const config = ASPECT_RATIO_CONFIGS[aspectRatio]
+      imageMutation.mutate({
+        scriptId: scriptMutation.data.id,
+        imageSize: config.imageSize,
+      })
     }
   }
 
   const handleRenderVideo = () => {
     if (scriptMutation.data) {
-      videoMutation.mutate(scriptMutation.data.id)
+      const config = ASPECT_RATIO_CONFIGS[aspectRatio]
+      videoMutation.mutate({
+        scriptId: scriptMutation.data.id,
+        videoWidth: config.videoWidth,
+        videoHeight: config.videoHeight,
+      })
     }
   }
 
@@ -200,6 +213,12 @@ function App() {
       )
       imageMutation.data.images = updatedImages
     }
+  }
+
+  const handleScriptUpdate = (updatedScript: YouTubeScript) => {
+    // Update the mutation data with the edited script
+    // This allows users to edit the script before generating audio/images
+    scriptMutation.data = updatedScript
   }
 
   const handleDownloadVideo = async () => {
@@ -271,6 +290,7 @@ function App() {
             isPending={scriptMutation.isPending}
             error={scriptMutation.error}
             onGenerate={handleGenerateScript}
+            onScriptUpdate={handleScriptUpdate}
           />
         )}
 
@@ -296,7 +316,13 @@ function App() {
             imageResult={imageMutation.data}
             isPending={imageMutation.isPending}
             error={imageMutation.error}
+            aspectRatio={aspectRatio}
+            onAspectRatioChange={setAspectRatio}
             onGenerate={handleGenerateImages}
+            onRetry={() => {
+              imageMutation.reset()
+              handleGenerateImages()
+            }}
           />
         )}
 

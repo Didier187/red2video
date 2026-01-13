@@ -23,6 +23,8 @@ export interface VideoRenderOptions {
   scenes: SceneData[]
   outputFormat?: 'mp4' | 'webm'
   quality?: 'low' | 'medium' | 'high'
+  width?: number
+  height?: number
 }
 
 export interface VideoRenderResult {
@@ -65,6 +67,8 @@ export async function renderVideo(options: VideoRenderOptions): Promise<VideoRen
     scenes,
     outputFormat = 'mp4',
     quality = 'medium',
+    width = 1920,
+    height = 1080,
   } = options
 
   const qualitySettings = QUALITY_SETTINGS[quality]
@@ -150,6 +154,8 @@ export async function renderVideo(options: VideoRenderOptions): Promise<VideoRen
       ...composition,
       durationInFrames,
       fps: qualitySettings.fps,
+      width,
+      height,
     },
     serveUrl: bundleLocation,
     codec: outputFormat === 'mp4' ? 'h264' : 'vp8',

@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react'
-import type { ImageGenerationResult } from './types'
+import { AlertCircle, RotateCcw } from 'lucide-react'
+import type { ImageGenerationResult, AspectRatio } from './types'
+import { AspectRatioSelector } from './AspectRatioSelector'
+import { CostEstimate } from './CostEstimate'
 
 interface ImageGenerationStepProps {
   sceneCount: number
   imageResult: ImageGenerationResult | undefined
   isPending: boolean
   error: Error | null
+  aspectRatio: AspectRatio
+  onAspectRatioChange: (ratio: AspectRatio) => void
   onGenerate: () => void
+  onRetry?: () => void
 }
 
 const LOADING_MESSAGES = [
@@ -173,7 +179,10 @@ export function ImageGenerationStep({
   imageResult,
   isPending,
   error,
+  aspectRatio,
+  onAspectRatioChange,
   onGenerate,
+  onRetry,
 }: ImageGenerationStepProps) {
   return (
     <div className="atlas-card p-8 mb-6">
@@ -181,10 +190,29 @@ export function ImageGenerationStep({
       <div className="corner-br" />
       <p className="atlas-label mb-4">Step 04 / Generate Images</p>
 
-      {!isPending && (
-        <p className="text-sm text-[#666] dark:text-[#aaa] mb-6">
-          Generate DALL-E 3 images for all {sceneCount} scenes
-        </p>
+      {!isPending && !imageResult && (
+        <>
+          <p className="text-sm text-[#666] dark:text-[#aaa] mb-4">
+            Generate DALL-E 3 images for all {sceneCount} scenes
+          </p>
+
+          <div className="mb-6">
+            <p className="atlas-label mb-3">Video Format</p>
+            <AspectRatioSelector
+              selected={aspectRatio}
+              onSelect={onAspectRatioChange}
+              disabled={isPending}
+            />
+          </div>
+
+          <div className="mb-6">
+            <CostEstimate
+              sceneCount={sceneCount}
+              aspectRatio={aspectRatio}
+              showDetails
+            />
+          </div>
+        </>
       )}
 
       {isPending ? (
@@ -200,7 +228,28 @@ export function ImageGenerationStep({
       )}
 
       {error && (
-        <p className="text-[#ff6e41] text-sm mt-4">{error.message}</p>
+        <div className="mt-4 p-4 bg-[#fef2f2] dark:bg-[#2a1a1a] rounded-lg border border-[#fecaca] dark:border-[#dc2626]">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-[#dc2626] shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm text-[#991b1b] dark:text-[#fca5a5] font-medium mb-1">
+                Image generation failed
+              </p>
+              <p className="text-xs text-[#b91c1c] dark:text-[#f87171]">
+                {error.message}
+              </p>
+              {onRetry && (
+                <button
+                  onClick={onRetry}
+                  className="mt-3 flex items-center gap-2 text-sm text-[#dc2626] hover:text-[#b91c1c] dark:text-[#f87171] dark:hover:text-[#fca5a5] transition-colors"
+                >
+                  <RotateCcw size={14} />
+                  Try again
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {imageResult && (
