@@ -6,13 +6,20 @@ import {
   ImageQuality,
   ImageStyle,
 } from '../agents/imageGenerator'
+import {
+  generateSeeDreamImagesForScenes,
+  SeeDreamGenerationResult,
+} from '../agents/seedreamGenerator'
 import { getScript, updateScript } from '../lib/scriptStore'
+
+type ImageProvider = 'dall-e' | 'seedream'
 
 interface ImageRequest {
   scriptId: string
   size?: ImageSize
   quality?: ImageQuality
   style?: ImageStyle
+  provider?: ImageProvider
 }
 
 export const Route = createFileRoute('/api/generate-images')({
@@ -37,15 +44,37 @@ export const Route = createFileRoute('/api/generate-images')({
             )
           }
 
-          const result: ImageGenerationResult = await generateImagesForScenes(
-            body.scriptId,
-            storedScript.script.scenes,
-            {
-              size: body.size,
-              quality: body.quality,
-              style: body.style,
+          const provider = body.provider || 'dall-e'
+          let result: ImageGenerationResult | SeeDreamGenerationResult
+
+          if (provider === 'seedream') {
+            // Map DALL-E size to SeeDream size
+            const sizeMap: Record<string, '1K' | '2K' | '4K'> = {
+              '1024x1024': '1K',
+              '1792x1024': '2K',
+              '1024x1792': '2K',
             }
-          )
+            const seedreamSize = sizeMap[body.size || '1792x1024'] || '2K'
+
+            result = await generateSeeDreamImagesForScenes(
+              body.scriptId,
+              storedScript.script.scenes,
+              {
+                size: seedreamSize,
+                watermark: false,
+              }
+            )
+          } else {
+            result = await generateImagesForScenes(
+              body.scriptId,
+              storedScript.script.scenes,
+              {
+                size: body.size,
+                quality: body.quality,
+                style: body.style,
+              }
+            )
+          }
 
           // Update script with image paths
           const sceneMedia = result.images.map((img) => ({

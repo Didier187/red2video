@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { AlertCircle, RotateCcw } from 'lucide-react'
-import type { ImageGenerationResult, AspectRatio } from './types'
+import type { ImageGenerationResult, AspectRatio, ImageProvider } from './types'
 import { AspectRatioSelector } from './AspectRatioSelector'
+import { ImageProviderSelector } from './ImageProviderSelector'
 import { CostEstimate } from './CostEstimate'
 
 interface ImageGenerationStepProps {
@@ -11,32 +12,48 @@ interface ImageGenerationStepProps {
   error: Error | null
   aspectRatio: AspectRatio
   onAspectRatioChange: (ratio: AspectRatio) => void
+  imageProvider: ImageProvider
+  onImageProviderChange: (provider: ImageProvider) => void
   onGenerate: () => void
   onRetry?: () => void
 }
 
-const LOADING_MESSAGES = [
-  'Connecting to DALL-E 3...',
-  'Analyzing scene descriptions...',
-  'Generating visual concepts...',
-  'Rendering high-quality images...',
-  'Applying artistic styles...',
-  'Enhancing image details...',
-  'Processing final touches...',
-]
+const LOADING_MESSAGES: Record<ImageProvider, string[]> = {
+  'dall-e': [
+    'Connecting to DALL-E 3...',
+    'Analyzing scene descriptions...',
+    'Generating visual concepts...',
+    'Rendering high-quality images...',
+    'Applying artistic styles...',
+    'Enhancing image details...',
+    'Processing final touches...',
+  ],
+  'seedream': [
+    'Connecting to SeeDream...',
+    'Analyzing scene descriptions...',
+    'Generating visual concepts...',
+    'Rendering high-quality images...',
+    'Applying cinematic styles...',
+    'Enhancing image details...',
+    'Processing final touches...',
+  ],
+}
 
 interface LoadingSpinnerProps {
   sceneCount: number
+  provider: ImageProvider
 }
 
-function LoadingSpinner({ sceneCount }: LoadingSpinnerProps) {
+function LoadingSpinner({ sceneCount, provider }: LoadingSpinnerProps) {
   const [messageIndex, setMessageIndex] = useState(0)
   const [dots, setDots] = useState('')
   const [currentScene, setCurrentScene] = useState(1)
 
+  const messages = LOADING_MESSAGES[provider]
+
   useEffect(() => {
     const messageInterval = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length)
+      setMessageIndex((prev) => (prev + 1) % messages.length)
     }, 4000)
 
     const dotsInterval = setInterval(() => {
@@ -148,11 +165,11 @@ function LoadingSpinner({ sceneCount }: LoadingSpinnerProps) {
       </div>
 
       <p className="text-lg font-medium text-center">
-        {LOADING_MESSAGES[messageIndex]}
+        {messages[messageIndex]}
         <span className="inline-block w-8 text-left">{dots}</span>
       </p>
       <p className="text-sm text-[#666] dark:text-[#999] mt-2">
-        DALL-E 3 is creating stunning visuals for your video
+        {provider === 'dall-e' ? 'DALL-E 3' : 'SeeDream'} is creating stunning visuals for your video
       </p>
 
       {/* Scene indicators */}
@@ -181,6 +198,8 @@ export function ImageGenerationStep({
   error,
   aspectRatio,
   onAspectRatioChange,
+  imageProvider,
+  onImageProviderChange,
   onGenerate,
   onRetry,
 }: ImageGenerationStepProps) {
@@ -193,8 +212,17 @@ export function ImageGenerationStep({
       {!isPending && !imageResult && (
         <>
           <p className="text-sm text-[#666] dark:text-[#aaa] mb-4">
-            Generate DALL-E 3 images for all {sceneCount} scenes
+            Generate images for all {sceneCount} scenes
           </p>
+
+          <div className="mb-6">
+            <p className="atlas-label mb-3">Image Provider</p>
+            <ImageProviderSelector
+              selected={imageProvider}
+              onSelect={onImageProviderChange}
+              disabled={isPending}
+            />
+          </div>
 
           <div className="mb-6">
             <p className="atlas-label mb-3">Video Format</p>
@@ -216,7 +244,7 @@ export function ImageGenerationStep({
       )}
 
       {isPending ? (
-        <LoadingSpinner sceneCount={sceneCount} />
+        <LoadingSpinner sceneCount={sceneCount} provider={imageProvider} />
       ) : (
         <button
           onClick={onGenerate}

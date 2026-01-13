@@ -7,6 +7,7 @@ import {
   type ImageStatusResponse,
   type YouTubeScript,
   type AspectRatio,
+  type ImageProvider,
   ASPECT_RATIO_CONFIGS,
   getRedditPost,
   generateScript,
@@ -16,6 +17,7 @@ import {
   regenerateImage,
   renderVideo,
   getImageStatus,
+  generateMetadata,
   AnimatedBackground,
   AudioGenerationStep,
   DarkModeToggle,
@@ -27,6 +29,7 @@ import {
   ScriptGenerationStep,
   UrlInputStep,
   VideoRenderStep,
+  YouTubeMetadataStep,
 } from '../components'
 
 export const Route = createFileRoute('/')({ component: App })
@@ -36,6 +39,7 @@ function App() {
   const [submittedUrl, setSubmittedUrl] = useState('')
   const [selectedVoice, setSelectedVoice] = useState<Voice>('nova')
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('16:9')
+  const [imageProvider, setImageProvider] = useState<ImageProvider>('dall-e')
   const [voiceSamples, setVoiceSamples] = useState<Record<string, string>>({})
   const [loadingSample, setLoadingSample] = useState<Voice | null>(null)
   const [playingVoice, setPlayingVoice] = useState<Voice | null>(null)
@@ -81,6 +85,10 @@ function App() {
     mutationFn: renderVideo,
   })
 
+  const metadataMutation = useMutation({
+    mutationFn: generateMetadata,
+  })
+
   // Poll for image generation progress while images are being generated
   useEffect(() => {
     if (!scriptMutation.data?.id || !imageMutation.isPending) {
@@ -114,6 +122,7 @@ function App() {
       audioMutation.reset()
       imageMutation.reset()
       videoMutation.reset()
+      metadataMutation.reset()
     }
   }
 
@@ -182,6 +191,7 @@ function App() {
       imageMutation.mutate({
         scriptId: scriptMutation.data.id,
         imageSize: config.imageSize,
+        provider: imageProvider,
       })
     }
   }
@@ -204,6 +214,7 @@ function App() {
       scriptId: scriptMutation.data.id,
       sceneIndex,
       prompt: newPrompt,
+      provider: imageProvider,
     })
 
     // Update the imageMutation data with the new image info
@@ -237,6 +248,15 @@ function App() {
     window.URL.revokeObjectURL(downloadUrl)
   }
 
+  const handleGenerateMetadata = () => {
+    if (scriptMutation.data && data) {
+      metadataMutation.mutate({
+        scriptId: scriptMutation.data.id,
+        sourceContent: data.plainText,
+      })
+    }
+  }
+
   const getStepStatus = (step: number): StepStatus => {
     if (step === 1) {
       if (data) return 'completed'
@@ -262,6 +282,11 @@ function App() {
       if (videoMutation.data) return 'completed'
       if (videoMutation.isPending) return 'active'
       return imageMutation.data ? 'active' : 'pending'
+    }
+    if (step === 6) {
+      if (metadataMutation.data) return 'completed'
+      if (metadataMutation.isPending) return 'active'
+      return videoMutation.data ? 'active' : 'pending'
     }
     return 'pending'
   }
@@ -318,6 +343,8 @@ function App() {
             error={imageMutation.error}
             aspectRatio={aspectRatio}
             onAspectRatioChange={setAspectRatio}
+            imageProvider={imageProvider}
+            onImageProviderChange={setImageProvider}
             onGenerate={handleGenerateImages}
             onRetry={() => {
               imageMutation.reset()
@@ -336,6 +363,19 @@ function App() {
             error={videoMutation.error}
             onRender={handleRenderVideo}
             onDownload={handleDownloadVideo}
+          />
+        )}
+
+        {videoMutation.data && (
+          <YouTubeMetadataStep
+            metadata={metadataMutation.data}
+            isPending={metadataMutation.isPending}
+            error={metadataMutation.error}
+            onGenerate={handleGenerateMetadata}
+            onRetry={() => {
+              metadataMutation.reset()
+              handleGenerateMetadata()
+            }}
           />
         )}
 

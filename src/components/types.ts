@@ -55,6 +55,20 @@ export interface VideoRenderResult {
   durationSeconds: number
 }
 
+export type TitleStyle = 'curiosity' | 'dramatic' | 'emotional' | 'clickbait' | 'straightforward'
+
+export interface TitleOption {
+  title: string
+  style: TitleStyle
+}
+
+export interface YouTubeMetadata {
+  titles: TitleOption[]
+  description: string
+  tags: string[]
+  hashtags: string[]
+}
+
 export interface ApiError {
   error: string
 }
@@ -64,6 +78,27 @@ export type Voice = 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'
 export type StepStatus = 'pending' | 'active' | 'completed'
 
 export type AspectRatio = '16:9' | '9:16' | '1:1'
+
+export type ImageProvider = 'dall-e' | 'seedream'
+
+export interface ImageProviderConfig {
+  label: string
+  description: string
+  icon: string
+}
+
+export const IMAGE_PROVIDER_CONFIGS: Record<ImageProvider, ImageProviderConfig> = {
+  'dall-e': {
+    label: 'DALL-E 3',
+    description: 'OpenAI',
+    icon: '🎨',
+  },
+  'seedream': {
+    label: 'SeeDream',
+    description: 'ByteDance',
+    icon: '🌈',
+  },
+}
 
 export interface AspectRatioConfig {
   label: string

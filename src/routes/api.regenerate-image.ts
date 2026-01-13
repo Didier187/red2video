@@ -8,7 +8,10 @@ import {
   ImageStyle,
   GeneratedImage,
 } from '../agents/imageGenerator'
+import { generateSeeDreamImage } from '../agents/seedreamGenerator'
 import { getScript } from '../lib/scriptStore'
+
+type ImageProvider = 'dall-e' | 'seedream'
 
 interface RegenerateImageRequest {
   scriptId: string
@@ -17,6 +20,7 @@ interface RegenerateImageRequest {
   size?: ImageSize
   quality?: ImageQuality
   style?: ImageStyle
+  provider?: ImageProvider
 }
 
 const MEDIA_DIR = path.join(process.cwd(), '.media-store')
@@ -67,11 +71,29 @@ export const Route = createFileRoute('/api/regenerate-image')({
           const fileName = `scene-${String(body.sceneIndex + 1).padStart(2, '0')}.png`
           const filePath = path.join(MEDIA_DIR, body.scriptId, 'images', fileName)
 
-          const imageBuffer = await generateImageForPrompt(body.prompt.trim(), {
-            size: body.size || '1792x1024',
-            quality: body.quality || 'standard',
-            style: body.style || 'vivid',
-          })
+          const provider = body.provider || 'dall-e'
+          let imageBuffer: Buffer
+
+          if (provider === 'seedream') {
+            // Map DALL-E size to SeeDream size
+            const sizeMap: Record<string, '1K' | '2K' | '4K'> = {
+              '1024x1024': '1K',
+              '1792x1024': '2K',
+              '1024x1792': '2K',
+            }
+            const seedreamSize = sizeMap[body.size || '1792x1024'] || '2K'
+
+            imageBuffer = await generateSeeDreamImage(body.prompt.trim(), {
+              size: seedreamSize,
+              watermark: false,
+            })
+          } else {
+            imageBuffer = await generateImageForPrompt(body.prompt.trim(), {
+              size: body.size || '1792x1024',
+              quality: body.quality || 'standard',
+              style: body.style || 'vivid',
+            })
+          }
 
           await fs.writeFile(filePath, imageBuffer)
 

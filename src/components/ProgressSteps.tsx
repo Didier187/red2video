@@ -28,6 +28,8 @@ export function ProgressSteps({ getStepStatus }: ProgressStepsProps) {
         <StepIndicator step={4} title="Images" status={getStepStatus(4)} />
         <div className="flex-1 h-px bg-[#e2e2e2] dark:bg-[#444] mx-4" />
         <StepIndicator step={5} title="Render" status={getStepStatus(5)} />
+        <div className="flex-1 h-px bg-[#e2e2e2] dark:bg-[#444] mx-4" />
+        <StepIndicator step={6} title="SEO" status={getStepStatus(6)} />
       </div>
     </div>
   )

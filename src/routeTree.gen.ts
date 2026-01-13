@@ -14,6 +14,7 @@ import { Route as ApiRenderVideoRouteImport } from './routes/api.render-video'
 import { Route as ApiRegenerateImageRouteImport } from './routes/api.regenerate-image'
 import { Route as ApiRedditRouteImport } from './routes/api.reddit'
 import { Route as ApiGenerateScriptRouteImport } from './routes/api.generate-script'
+import { Route as ApiGenerateMetadataRouteImport } from './routes/api.generate-metadata'
 import { Route as ApiGenerateImagesRouteImport } from './routes/api.generate-images'
 import { Route as ApiGenerateAudioRouteImport } from './routes/api.generate-audio'
 import { Route as ApiRenderProgressScriptIdRouteImport } from './routes/api.render-progress.$scriptId'
@@ -44,6 +45,11 @@ const ApiRedditRoute = ApiRedditRouteImport.update({
 const ApiGenerateScriptRoute = ApiGenerateScriptRouteImport.update({
   id: '/api/generate-script',
   path: '/api/generate-script',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGenerateMetadataRoute = ApiGenerateMetadataRouteImport.update({
+  id: '/api/generate-metadata',
+  path: '/api/generate-metadata',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGenerateImagesRoute = ApiGenerateImagesRouteImport.update({
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/generate-audio': typeof ApiGenerateAudioRoute
   '/api/generate-images': typeof ApiGenerateImagesRoute
+  '/api/generate-metadata': typeof ApiGenerateMetadataRoute
   '/api/generate-script': typeof ApiGenerateScriptRoute
   '/api/reddit': typeof ApiRedditRoute
   '/api/regenerate-image': typeof ApiRegenerateImageRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/generate-audio': typeof ApiGenerateAudioRoute
   '/api/generate-images': typeof ApiGenerateImagesRoute
+  '/api/generate-metadata': typeof ApiGenerateMetadataRoute
   '/api/generate-script': typeof ApiGenerateScriptRoute
   '/api/reddit': typeof ApiRedditRoute
   '/api/regenerate-image': typeof ApiRegenerateImageRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/api/generate-audio': typeof ApiGenerateAudioRoute
   '/api/generate-images': typeof ApiGenerateImagesRoute
+  '/api/generate-metadata': typeof ApiGenerateMetadataRoute
   '/api/generate-script': typeof ApiGenerateScriptRoute
   '/api/reddit': typeof ApiRedditRoute
   '/api/regenerate-image': typeof ApiRegenerateImageRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/'
     | '/api/generate-audio'
     | '/api/generate-images'
+    | '/api/generate-metadata'
     | '/api/generate-script'
     | '/api/reddit'
     | '/api/regenerate-image'
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/'
     | '/api/generate-audio'
     | '/api/generate-images'
+    | '/api/generate-metadata'
     | '/api/generate-script'
     | '/api/reddit'
     | '/api/regenerate-image'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/'
     | '/api/generate-audio'
     | '/api/generate-images'
+    | '/api/generate-metadata'
     | '/api/generate-script'
     | '/api/reddit'
     | '/api/regenerate-image'
@@ -166,6 +178,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiGenerateAudioRoute: typeof ApiGenerateAudioRoute
   ApiGenerateImagesRoute: typeof ApiGenerateImagesRoute
+  ApiGenerateMetadataRoute: typeof ApiGenerateMetadataRoute
   ApiGenerateScriptRoute: typeof ApiGenerateScriptRoute
   ApiRedditRoute: typeof ApiRedditRoute
   ApiRegenerateImageRoute: typeof ApiRegenerateImageRoute
@@ -211,6 +224,13 @@ declare module '@tanstack/react-router' {
       path: '/api/generate-script'
       fullPath: '/api/generate-script'
       preLoaderRoute: typeof ApiGenerateScriptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/generate-metadata': {
+      id: '/api/generate-metadata'
+      path: '/api/generate-metadata'
+      fullPath: '/api/generate-metadata'
+      preLoaderRoute: typeof ApiGenerateMetadataRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/generate-images': {
@@ -262,6 +282,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiGenerateAudioRoute: ApiGenerateAudioRoute,
   ApiGenerateImagesRoute: ApiGenerateImagesRoute,
+  ApiGenerateMetadataRoute: ApiGenerateMetadataRoute,
   ApiGenerateScriptRoute: ApiGenerateScriptRoute,
   ApiRedditRoute: ApiRedditRoute,
   ApiRegenerateImageRoute: ApiRegenerateImageRoute,

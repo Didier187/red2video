@@ -5,8 +5,10 @@ import type {
   ImageGenerationResult,
   GeneratedImage,
   VideoRenderResult,
+  YouTubeMetadata,
   ApiError,
   Voice,
+  ImageProvider,
 } from './types'
 import { SAMPLE_TEXT } from './constants'
 
@@ -85,6 +87,7 @@ export async function generateVoiceSample(voice: Voice): Promise<string> {
 export async function generateImages(params: {
   scriptId: string
   imageSize?: '1792x1024' | '1024x1792' | '1024x1024'
+  provider?: ImageProvider
 }): Promise<ImageGenerationResult> {
   const res = await fetch('/api/generate-images', {
     method: 'POST',
@@ -94,6 +97,7 @@ export async function generateImages(params: {
       size: params.imageSize || '1792x1024',
       quality: 'standard',
       style: 'vivid',
+      provider: params.provider || 'dall-e',
     }),
   })
   const data: ImageGenerationResult | ApiError = await res.json()
@@ -134,6 +138,7 @@ export async function regenerateImage(params: {
   scriptId: string
   sceneIndex: number
   prompt: string
+  provider?: ImageProvider
 }): Promise<GeneratedImage> {
   const res = await fetch('/api/regenerate-image', {
     method: 'POST',
@@ -145,6 +150,7 @@ export async function regenerateImage(params: {
       size: '1792x1024',
       quality: 'standard',
       style: 'vivid',
+      provider: params.provider || 'dall-e',
     }),
   })
   const data: GeneratedImage | ApiError = await res.json()
@@ -171,6 +177,27 @@ export async function getImageStatus(
 ): Promise<ImageStatusResponse> {
   const res = await fetch(`/api/image-status/${scriptId}`)
   const data: ImageStatusResponse | ApiError = await res.json()
+
+  if (!res.ok || 'error' in data) {
+    throw new Error((data as ApiError).error || `Request failed: ${res.status}`)
+  }
+
+  return data
+}
+
+export async function generateMetadata(params: {
+  scriptId: string
+  sourceContent: string
+}): Promise<YouTubeMetadata> {
+  const res = await fetch('/api/generate-metadata', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      scriptId: params.scriptId,
+      sourceContent: params.sourceContent,
+    }),
+  })
+  const data: YouTubeMetadata | ApiError = await res.json()
 
   if (!res.ok || 'error' in data) {
     throw new Error((data as ApiError).error || `Request failed: ${res.status}`)
