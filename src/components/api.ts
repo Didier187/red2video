@@ -3,6 +3,7 @@ import type {
   YouTubeScript,
   AudioGenerationResult,
   ImageGenerationResult,
+  GeneratedImage,
   VideoRenderResult,
   ApiError,
   Voice,
@@ -110,6 +111,55 @@ export async function renderVideo(scriptId: string): Promise<VideoRenderResult> 
     body: JSON.stringify({ scriptId, quality: 'medium', outputFormat: 'mp4' }),
   })
   const data: VideoRenderResult | ApiError = await res.json()
+
+  if (!res.ok || 'error' in data) {
+    throw new Error((data as ApiError).error || `Request failed: ${res.status}`)
+  }
+
+  return data
+}
+
+export async function regenerateImage(params: {
+  scriptId: string
+  sceneIndex: number
+  prompt: string
+}): Promise<GeneratedImage> {
+  const res = await fetch('/api/regenerate-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      scriptId: params.scriptId,
+      sceneIndex: params.sceneIndex,
+      prompt: params.prompt,
+      size: '1792x1024',
+      quality: 'standard',
+      style: 'vivid',
+    }),
+  })
+  const data: GeneratedImage | ApiError = await res.json()
+
+  if (!res.ok || 'error' in data) {
+    throw new Error((data as ApiError).error || `Request failed: ${res.status}`)
+  }
+
+  return data
+}
+
+export interface ImageStatusResponse {
+  images: Array<{
+    sceneIndex: number
+    fileName: string
+    prompt: string
+  }>
+  totalScenes: number
+  isComplete: boolean
+}
+
+export async function getImageStatus(
+  scriptId: string,
+): Promise<ImageStatusResponse> {
+  const res = await fetch(`/api/image-status/${scriptId}`)
+  const data: ImageStatusResponse | ApiError = await res.json()
 
   if (!res.ok || 'error' in data) {
     throw new Error((data as ApiError).error || `Request failed: ${res.status}`)

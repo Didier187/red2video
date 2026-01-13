@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import { promises as fs } from 'fs'
 import path from 'path'
+import { getScript, updateScript } from '../lib/scriptStore'
 
 export type ImageSize = '1024x1024' | '1792x1024' | '1024x1792'
 export type ImageQuality = 'standard' | 'hd'
@@ -50,7 +51,7 @@ export async function generateImageForPrompt(
     response_format: 'b64_json',
   })
 
-  const base64Data = response.data[0].b64_json
+  const base64Data = response.data?.[0]?.b64_json
   if (!base64Data) {
     throw new Error('No image data returned from DALL-E')
   }
@@ -75,12 +76,35 @@ export async function generateImagesForScenes(
       const imageBuffer = await generateImageForPrompt(scene.imagePrompt, options)
       await fs.writeFile(filePath, imageBuffer)
 
-      images.push({
+      const generatedImage: GeneratedImage = {
         sceneIndex: i,
         prompt: scene.imagePrompt,
         filePath,
         fileName,
-      })
+      }
+      images.push(generatedImage)
+
+      // Update script store with this image immediately so UI can show it
+      const currentScript = await getScript(scriptId)
+      if (currentScript) {
+        const existingMedia = currentScript.media?.scenes || []
+        const updatedScenes = [...existingMedia]
+
+        // Ensure array has enough slots
+        while (updatedScenes.length <= i) {
+          updatedScenes.push({})
+        }
+
+        // Update this scene's image path
+        updatedScenes[i] = {
+          ...updatedScenes[i],
+          imagePath: filePath,
+        }
+
+        await updateScript(scriptId, {
+          media: { scenes: updatedScenes },
+        })
+      }
     } catch (error) {
       console.error(`Failed to generate image for scene ${i + 1}:`, error)
       throw error

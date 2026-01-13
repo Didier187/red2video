@@ -4,12 +4,15 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   type Voice,
   type StepStatus,
+  type ImageStatusResponse,
   getRedditPost,
   generateScript,
   generateAudio,
   generateVoiceSample,
   generateImages,
+  regenerateImage,
   renderVideo,
+  getImageStatus,
   AnimatedBackground,
   AudioGenerationStep,
   DarkModeToggle,
@@ -32,6 +35,7 @@ function App() {
   const [voiceSamples, setVoiceSamples] = useState<Record<string, string>>({})
   const [loadingSample, setLoadingSample] = useState<Voice | null>(null)
   const [playingVoice, setPlayingVoice] = useState<Voice | null>(null)
+  const [imageStatus, setImageStatus] = useState<ImageStatusResponse | undefined>()
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -72,6 +76,31 @@ function App() {
   const videoMutation = useMutation({
     mutationFn: renderVideo,
   })
+
+  // Poll for image generation progress while images are being generated
+  useEffect(() => {
+    if (!scriptMutation.data?.id || !imageMutation.isPending) {
+      return
+    }
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const status = await getImageStatus(scriptMutation.data!.id)
+        setImageStatus(status)
+      } catch (err) {
+        console.error('Failed to fetch image status:', err)
+      }
+    }, 2000) // Poll every 2 seconds
+
+    return () => clearInterval(pollInterval)
+  }, [scriptMutation.data?.id, imageMutation.isPending])
+
+  // Clear image status when generation completes
+  useEffect(() => {
+    if (imageMutation.data) {
+      setImageStatus(undefined)
+    }
+  }, [imageMutation.data])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -152,6 +181,24 @@ function App() {
   const handleRenderVideo = () => {
     if (scriptMutation.data) {
       videoMutation.mutate(scriptMutation.data.id)
+    }
+  }
+
+  const handleRegenerateImage = async (sceneIndex: number, newPrompt: string) => {
+    if (!scriptMutation.data) return
+
+    const result = await regenerateImage({
+      scriptId: scriptMutation.data.id,
+      sceneIndex,
+      prompt: newPrompt,
+    })
+
+    // Update the imageMutation data with the new image info
+    if (imageMutation.data) {
+      const updatedImages = imageMutation.data.images.map((img) =>
+        img.sceneIndex === sceneIndex ? result : img
+      )
+      imageMutation.data.images = updatedImages
     }
   }
 
@@ -272,6 +319,8 @@ function App() {
             scriptId={scriptMutation.data.id}
             audioResult={audioMutation.data}
             imageResult={imageMutation.data}
+            imageStatus={imageStatus}
+            onRegenerateImage={handleRegenerateImage}
           />
         )}
 
