@@ -9,7 +9,14 @@ import { nitro } from 'nitro/vite'
 const config = defineConfig({
   plugins: [
     devtools(),
-    nitro(),
+    nitro({
+      devProxy: {
+        // Increase timeout for long-running API calls (image generation)
+        '/api': {
+          timeout: 300000, // 5 minutes
+        },
+      },
+    }),
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
       projects: ['./tsconfig.json'],
