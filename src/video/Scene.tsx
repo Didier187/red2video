@@ -6,13 +6,15 @@ interface SceneProps {
   imageDataUrl?: string
   audioDataUrl?: string
   durationInFrames: number
+  isLastScene?: boolean
 }
 
 export const Scene: React.FC<SceneProps> = ({
   text,
   imageDataUrl,
   audioDataUrl,
-  durationInFrames
+  durationInFrames,
+  isLastScene = false,
 }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
@@ -36,6 +38,21 @@ export const Scene: React.FC<SceneProps> = ({
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   })
+
+  // CTA animation for last scene (appears in last 2.5 seconds)
+  const ctaStartFrame = durationInFrames - fps * 2.5
+  const ctaOpacity = isLastScene
+    ? interpolate(frame, [ctaStartFrame, ctaStartFrame + fps * 0.4], [0, 1], {
+        extrapolateLeft: 'clamp',
+        extrapolateRight: 'clamp',
+      })
+    : 0
+  const ctaScale = isLastScene
+    ? interpolate(frame, [ctaStartFrame, ctaStartFrame + fps * 0.5], [0.8, 1], {
+        extrapolateLeft: 'clamp',
+        extrapolateRight: 'clamp',
+      })
+    : 1
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#0a0a0a' }}>
@@ -95,6 +112,46 @@ export const Scene: React.FC<SceneProps> = ({
           </p>
         </div>
       </AbsoluteFill>
+
+      {/* CTA overlay for last scene */}
+      {isLastScene && ctaOpacity > 0 && (
+        <AbsoluteFill
+          style={{
+            justifyContent: 'flex-start',
+            alignItems: 'center',
+            paddingTop: 80,
+            opacity: ctaOpacity,
+            transform: `scale(${ctaScale})`,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.85)',
+              padding: '20px 50px',
+              borderRadius: 12,
+              border: '2px solid rgba(133, 215, 255, 0.5)',
+              boxShadow: '0 4px 30px rgba(0, 0, 0, 0.5)',
+            }}
+          >
+            <p
+              style={{
+                fontFamily: 'IBM Plex Mono, monospace',
+                fontSize: 28,
+                color: 'white',
+                margin: 0,
+                textAlign: 'center',
+                letterSpacing: '0.05em',
+              }}
+            >
+              <span style={{ color: '#ff6e41' }}>Like</span>
+              {' \u2022 '}
+              <span style={{ color: '#85d7ff' }}>Comment</span>
+              {' \u2022 '}
+              <span style={{ color: '#ff4444' }}>Subscribe</span>
+            </p>
+          </div>
+        </AbsoluteFill>
+      )}
 
       {/* Audio */}
       {audioDataUrl && <Audio src={audioDataUrl} />}

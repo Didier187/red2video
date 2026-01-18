@@ -51,6 +51,7 @@ export const RedditVideo = ({
         const sceneDuration = scene.duration ?? scene.durationHint
         const durationInFrames = Math.round(sceneDuration * FPS)
         const startFrame = currentFrame
+        const isLastScene = index === scenes.length - 1
 
         currentFrame += durationInFrames
 
@@ -61,6 +62,7 @@ export const RedditVideo = ({
               imageDataUrl={scene.imageDataUrl}
               audioDataUrl={scene.audioDataUrl}
               durationInFrames={durationInFrames}
+              isLastScene={isLastScene}
             />
           </Sequence>
         )
