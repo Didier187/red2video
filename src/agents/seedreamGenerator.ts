@@ -1,6 +1,8 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import { getScript, updateScript } from '../lib/scriptStore'
+import type { CharacterConfig } from '../components/types'
+import { enhancePromptWithCharacters } from './promptEnhancer'
 
 export type SeeDreamSize = '1K' | '2K' | '4K'
 export type SeeDreamResponseFormat = 'url' | 'b64_json'
@@ -10,6 +12,7 @@ export interface SeeDreamOptions {
   watermark?: boolean
   sequentialImageGeneration?: 'enabled' | 'disabled'
   responseFormat?: SeeDreamResponseFormat
+  characterConfig?: CharacterConfig
 }
 
 export interface GeneratedSeeDreamImage {
@@ -116,14 +119,20 @@ export async function generateSeeDreamImagesForScenes(
 ): Promise<SeeDreamGenerationResult> {
   const imagesDir = await ensureMediaDir(scriptId)
   const images: GeneratedSeeDreamImage[] = []
+  const { characterConfig, ...imageOptions } = options
 
   for (let i = 0; i < scenes.length; i++) {
     const scene = scenes[i]
     const fileName = `scene-${String(i + 1).padStart(2, '0')}.png`
     const filePath = path.join(imagesDir, fileName)
 
+    // Enhance prompt with character consistency if config is provided
+    const finalPrompt = characterConfig
+      ? enhancePromptWithCharacters(scene.imagePrompt, characterConfig, i)
+      : scene.imagePrompt
+
     try {
-      const imageBuffer = await generateSeeDreamImage(scene.imagePrompt, options)
+      const imageBuffer = await generateSeeDreamImage(finalPrompt, imageOptions)
       await fs.writeFile(filePath, imageBuffer)
 
       const generatedImage: GeneratedSeeDreamImage = {

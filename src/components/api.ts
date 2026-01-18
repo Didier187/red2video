@@ -9,6 +9,8 @@ import type {
   ApiError,
   Voice,
   ImageProvider,
+  CharacterConfig,
+  CharacterDefinition,
 } from './types'
 import { SAMPLE_TEXT } from './constants'
 
@@ -88,6 +90,7 @@ export async function generateImages(params: {
   scriptId: string
   imageSize?: '1792x1024' | '1024x1792' | '1024x1024'
   provider?: ImageProvider
+  useCharacterConsistency?: boolean
 }): Promise<ImageGenerationResult> {
   const res = await fetch('/api/generate-images', {
     method: 'POST',
@@ -98,6 +101,7 @@ export async function generateImages(params: {
       quality: 'standard',
       style: 'vivid',
       provider: params.provider || 'dall-e',
+      useCharacterConsistency: params.useCharacterConsistency,
     }),
   })
   const data: ImageGenerationResult | ApiError = await res.json()
@@ -198,6 +202,50 @@ export async function generateMetadata(params: {
     }),
   })
   const data: YouTubeMetadata | ApiError = await res.json()
+
+  if (!res.ok || 'error' in data) {
+    throw new Error((data as ApiError).error || `Request failed: ${res.status}`)
+  }
+
+  return data
+}
+
+export async function extractCharacters(params: {
+  scriptId: string
+  sourceContent?: string
+}): Promise<CharacterConfig> {
+  const res = await fetch('/api/extract-characters', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      scriptId: params.scriptId,
+      sourceContent: params.sourceContent,
+    }),
+  })
+  const data: CharacterConfig | ApiError = await res.json()
+
+  if (!res.ok || 'error' in data) {
+    throw new Error((data as ApiError).error || `Request failed: ${res.status}`)
+  }
+
+  return data
+}
+
+export async function updateCharacters(params: {
+  scriptId: string
+  characters: CharacterDefinition[]
+  globalStyle?: string
+}): Promise<CharacterConfig> {
+  const res = await fetch('/api/update-characters', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      scriptId: params.scriptId,
+      characters: params.characters,
+      globalStyle: params.globalStyle,
+    }),
+  })
+  const data: CharacterConfig | ApiError = await res.json()
 
   if (!res.ok || 'error' in data) {
     throw new Error((data as ApiError).error || `Request failed: ${res.status}`)

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiUpdateCharactersRouteImport } from './routes/api.update-characters'
 import { Route as ApiRenderVideoRouteImport } from './routes/api.render-video'
 import { Route as ApiRegenerateImageRouteImport } from './routes/api.regenerate-image'
 import { Route as ApiRedditRouteImport } from './routes/api.reddit'
@@ -17,6 +18,7 @@ import { Route as ApiGenerateScriptRouteImport } from './routes/api.generate-scr
 import { Route as ApiGenerateMetadataRouteImport } from './routes/api.generate-metadata'
 import { Route as ApiGenerateImagesRouteImport } from './routes/api.generate-images'
 import { Route as ApiGenerateAudioRouteImport } from './routes/api.generate-audio'
+import { Route as ApiExtractCharactersRouteImport } from './routes/api.extract-characters'
 import { Route as ApiRenderProgressScriptIdRouteImport } from './routes/api.render-progress.$scriptId'
 import { Route as ApiImageStatusScriptIdRouteImport } from './routes/api.image-status.$scriptId'
 import { Route as ApiMediaScriptIdVideoFileNameRouteImport } from './routes/api.media.$scriptId.video.$fileName'
@@ -25,6 +27,11 @@ import { Route as ApiMediaScriptIdImagesFileNameRouteImport } from './routes/api
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUpdateCharactersRoute = ApiUpdateCharactersRouteImport.update({
+  id: '/api/update-characters',
+  path: '/api/update-characters',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiRenderVideoRoute = ApiRenderVideoRouteImport.update({
@@ -62,6 +69,11 @@ const ApiGenerateAudioRoute = ApiGenerateAudioRouteImport.update({
   path: '/api/generate-audio',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiExtractCharactersRoute = ApiExtractCharactersRouteImport.update({
+  id: '/api/extract-characters',
+  path: '/api/extract-characters',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiRenderProgressScriptIdRoute =
   ApiRenderProgressScriptIdRouteImport.update({
     id: '/api/render-progress/$scriptId',
@@ -88,6 +100,7 @@ const ApiMediaScriptIdImagesFileNameRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/extract-characters': typeof ApiExtractCharactersRoute
   '/api/generate-audio': typeof ApiGenerateAudioRoute
   '/api/generate-images': typeof ApiGenerateImagesRoute
   '/api/generate-metadata': typeof ApiGenerateMetadataRoute
@@ -95,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/api/reddit': typeof ApiRedditRoute
   '/api/regenerate-image': typeof ApiRegenerateImageRoute
   '/api/render-video': typeof ApiRenderVideoRoute
+  '/api/update-characters': typeof ApiUpdateCharactersRoute
   '/api/image-status/$scriptId': typeof ApiImageStatusScriptIdRoute
   '/api/render-progress/$scriptId': typeof ApiRenderProgressScriptIdRoute
   '/api/media/$scriptId/images/$fileName': typeof ApiMediaScriptIdImagesFileNameRoute
@@ -102,6 +116,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/extract-characters': typeof ApiExtractCharactersRoute
   '/api/generate-audio': typeof ApiGenerateAudioRoute
   '/api/generate-images': typeof ApiGenerateImagesRoute
   '/api/generate-metadata': typeof ApiGenerateMetadataRoute
@@ -109,6 +124,7 @@ export interface FileRoutesByTo {
   '/api/reddit': typeof ApiRedditRoute
   '/api/regenerate-image': typeof ApiRegenerateImageRoute
   '/api/render-video': typeof ApiRenderVideoRoute
+  '/api/update-characters': typeof ApiUpdateCharactersRoute
   '/api/image-status/$scriptId': typeof ApiImageStatusScriptIdRoute
   '/api/render-progress/$scriptId': typeof ApiRenderProgressScriptIdRoute
   '/api/media/$scriptId/images/$fileName': typeof ApiMediaScriptIdImagesFileNameRoute
@@ -117,6 +133,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/extract-characters': typeof ApiExtractCharactersRoute
   '/api/generate-audio': typeof ApiGenerateAudioRoute
   '/api/generate-images': typeof ApiGenerateImagesRoute
   '/api/generate-metadata': typeof ApiGenerateMetadataRoute
@@ -124,6 +141,7 @@ export interface FileRoutesById {
   '/api/reddit': typeof ApiRedditRoute
   '/api/regenerate-image': typeof ApiRegenerateImageRoute
   '/api/render-video': typeof ApiRenderVideoRoute
+  '/api/update-characters': typeof ApiUpdateCharactersRoute
   '/api/image-status/$scriptId': typeof ApiImageStatusScriptIdRoute
   '/api/render-progress/$scriptId': typeof ApiRenderProgressScriptIdRoute
   '/api/media/$scriptId/images/$fileName': typeof ApiMediaScriptIdImagesFileNameRoute
@@ -133,6 +151,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/api/extract-characters'
     | '/api/generate-audio'
     | '/api/generate-images'
     | '/api/generate-metadata'
@@ -140,6 +159,7 @@ export interface FileRouteTypes {
     | '/api/reddit'
     | '/api/regenerate-image'
     | '/api/render-video'
+    | '/api/update-characters'
     | '/api/image-status/$scriptId'
     | '/api/render-progress/$scriptId'
     | '/api/media/$scriptId/images/$fileName'
@@ -147,6 +167,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/api/extract-characters'
     | '/api/generate-audio'
     | '/api/generate-images'
     | '/api/generate-metadata'
@@ -154,6 +175,7 @@ export interface FileRouteTypes {
     | '/api/reddit'
     | '/api/regenerate-image'
     | '/api/render-video'
+    | '/api/update-characters'
     | '/api/image-status/$scriptId'
     | '/api/render-progress/$scriptId'
     | '/api/media/$scriptId/images/$fileName'
@@ -161,6 +183,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/api/extract-characters'
     | '/api/generate-audio'
     | '/api/generate-images'
     | '/api/generate-metadata'
@@ -168,6 +191,7 @@ export interface FileRouteTypes {
     | '/api/reddit'
     | '/api/regenerate-image'
     | '/api/render-video'
+    | '/api/update-characters'
     | '/api/image-status/$scriptId'
     | '/api/render-progress/$scriptId'
     | '/api/media/$scriptId/images/$fileName'
@@ -176,6 +200,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiExtractCharactersRoute: typeof ApiExtractCharactersRoute
   ApiGenerateAudioRoute: typeof ApiGenerateAudioRoute
   ApiGenerateImagesRoute: typeof ApiGenerateImagesRoute
   ApiGenerateMetadataRoute: typeof ApiGenerateMetadataRoute
@@ -183,6 +208,7 @@ export interface RootRouteChildren {
   ApiRedditRoute: typeof ApiRedditRoute
   ApiRegenerateImageRoute: typeof ApiRegenerateImageRoute
   ApiRenderVideoRoute: typeof ApiRenderVideoRoute
+  ApiUpdateCharactersRoute: typeof ApiUpdateCharactersRoute
   ApiImageStatusScriptIdRoute: typeof ApiImageStatusScriptIdRoute
   ApiRenderProgressScriptIdRoute: typeof ApiRenderProgressScriptIdRoute
   ApiMediaScriptIdImagesFileNameRoute: typeof ApiMediaScriptIdImagesFileNameRoute
@@ -196,6 +222,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/update-characters': {
+      id: '/api/update-characters'
+      path: '/api/update-characters'
+      fullPath: '/api/update-characters'
+      preLoaderRoute: typeof ApiUpdateCharactersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/render-video': {
@@ -247,6 +280,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGenerateAudioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/extract-characters': {
+      id: '/api/extract-characters'
+      path: '/api/extract-characters'
+      fullPath: '/api/extract-characters'
+      preLoaderRoute: typeof ApiExtractCharactersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/render-progress/$scriptId': {
       id: '/api/render-progress/$scriptId'
       path: '/api/render-progress/$scriptId'
@@ -280,6 +320,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiExtractCharactersRoute: ApiExtractCharactersRoute,
   ApiGenerateAudioRoute: ApiGenerateAudioRoute,
   ApiGenerateImagesRoute: ApiGenerateImagesRoute,
   ApiGenerateMetadataRoute: ApiGenerateMetadataRoute,
@@ -287,6 +328,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiRedditRoute: ApiRedditRoute,
   ApiRegenerateImageRoute: ApiRegenerateImageRoute,
   ApiRenderVideoRoute: ApiRenderVideoRoute,
+  ApiUpdateCharactersRoute: ApiUpdateCharactersRoute,
   ApiImageStatusScriptIdRoute: ApiImageStatusScriptIdRoute,
   ApiRenderProgressScriptIdRoute: ApiRenderProgressScriptIdRoute,
   ApiMediaScriptIdImagesFileNameRoute: ApiMediaScriptIdImagesFileNameRoute,

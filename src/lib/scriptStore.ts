@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import { randomUUID } from 'crypto'
+import type { CharacterConfig } from '../components/types'
 
 const STORE_DIR = path.join(process.cwd(), '.script-store')
 
@@ -24,6 +25,7 @@ export interface StoredScript {
     }>
     totalDuration: number
   }
+  characterConfig?: CharacterConfig
   audioGenerated?: boolean
   imagesGenerated?: boolean
   videoGenerated?: boolean

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { AlertCircle, RotateCcw } from 'lucide-react'
-import type { ImageGenerationResult, AspectRatio, ImageProvider } from './types'
+import { AlertCircle, RotateCcw, Users } from 'lucide-react'
+import type { ImageGenerationResult, AspectRatio, ImageProvider, CharacterConfig } from './types'
 import { AspectRatioSelector } from './AspectRatioSelector'
 import { ImageProviderSelector } from './ImageProviderSelector'
 import { CostEstimate } from './CostEstimate'
@@ -16,6 +16,9 @@ interface ImageGenerationStepProps {
   onImageProviderChange: (provider: ImageProvider) => void
   onGenerate: () => void
   onRetry?: () => void
+  characterConfig?: CharacterConfig
+  useCharacterConsistency: boolean
+  onCharacterConsistencyChange: (enabled: boolean) => void
 }
 
 const LOADING_MESSAGES: Record<ImageProvider, string[]> = {
@@ -202,7 +205,12 @@ export function ImageGenerationStep({
   onImageProviderChange,
   onGenerate,
   onRetry,
+  characterConfig,
+  useCharacterConsistency,
+  onCharacterConsistencyChange,
 }: ImageGenerationStepProps) {
+  const characterCount = characterConfig?.characters.length || 0
+
   return (
     <div className="atlas-card p-8 mb-6">
       <div className="corner-bl" />
@@ -232,6 +240,32 @@ export function ImageGenerationStep({
               disabled={isPending}
             />
           </div>
+
+          {characterCount > 0 && (
+            <div className="mb-6">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={useCharacterConsistency}
+                    onChange={(e) => onCharacterConsistencyChange(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-[#e2e2e2] dark:bg-[#333] peer-focus:ring-2 peer-focus:ring-[#ff6e41] rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ff6e41]" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users size={16} className="text-[#ff6e41]" />
+                  <span className="text-sm font-medium">Character Consistency</span>
+                  <span className="text-xs text-[#666] dark:text-[#999]">
+                    ({characterCount} character{characterCount !== 1 ? 's' : ''})
+                  </span>
+                </div>
+              </label>
+              <p className="text-xs text-[#999] dark:text-[#666] mt-2 ml-14">
+                Maintain visual consistency for characters across all scenes
+              </p>
+            </div>
+          )}
 
           <div className="mb-6">
             <CostEstimate

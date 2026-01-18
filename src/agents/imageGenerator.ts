@@ -2,6 +2,8 @@ import OpenAI from 'openai'
 import { promises as fs } from 'fs'
 import path from 'path'
 import { getScript, updateScript } from '../lib/scriptStore'
+import type { CharacterConfig } from '../components/types'
+import { enhancePromptWithCharacters } from './promptEnhancer'
 
 export type ImageSize = '1024x1024' | '1792x1024' | '1024x1792'
 export type ImageQuality = 'standard' | 'hd'
@@ -11,6 +13,7 @@ export interface ImageGenerationOptions {
   size?: ImageSize
   quality?: ImageQuality
   style?: ImageStyle
+  characterConfig?: CharacterConfig
 }
 
 export interface GeneratedImage {
@@ -66,14 +69,20 @@ export async function generateImagesForScenes(
 ): Promise<ImageGenerationResult> {
   const imagesDir = await ensureMediaDir(scriptId)
   const images: GeneratedImage[] = []
+  const { characterConfig, ...imageOptions } = options
 
   for (let i = 0; i < scenes.length; i++) {
     const scene = scenes[i]
     const fileName = `scene-${String(i + 1).padStart(2, '0')}.png`
     const filePath = path.join(imagesDir, fileName)
 
+    // Enhance prompt with character consistency if config is provided
+    const finalPrompt = characterConfig
+      ? enhancePromptWithCharacters(scene.imagePrompt, characterConfig, i)
+      : scene.imagePrompt
+
     try {
-      const imageBuffer = await generateImageForPrompt(scene.imagePrompt, options)
+      const imageBuffer = await generateImageForPrompt(finalPrompt, imageOptions)
       await fs.writeFile(filePath, imageBuffer)
 
       const generatedImage: GeneratedImage = {

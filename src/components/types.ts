@@ -77,6 +77,39 @@ export type Voice = 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'
 
 export type StepStatus = 'pending' | 'active' | 'completed'
 
+// Character consistency types
+export interface PhysicalDescription {
+  age?: string
+  gender?: string
+  build?: string
+  skinTone?: string
+  hairColor?: string
+  hairStyle?: string
+  eyeColor?: string
+  facialFeatures?: string
+  clothing?: string
+  accessories?: string
+}
+
+export type CharacterRole = 'protagonist' | 'antagonist' | 'supporting' | 'background'
+export type CharacterType = 'human' | 'animal' | 'creature' | 'object'
+
+export interface CharacterDefinition {
+  id: string
+  name: string
+  role: CharacterRole
+  type: CharacterType
+  physicalDescription: PhysicalDescription
+  consistencyPrompt: string
+  appearances: number[]
+}
+
+export interface CharacterConfig {
+  characters: CharacterDefinition[]
+  globalStyle?: string
+  extractedAt: string
+}
+
 export type AspectRatio = '16:9' | '9:16' | '1:1'
 
 export type ImageProvider = 'dall-e' | 'seedream'

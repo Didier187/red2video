@@ -8,6 +8,7 @@ import {
   type YouTubeScript,
   type AspectRatio,
   type ImageProvider,
+  type CharacterConfig,
   ASPECT_RATIO_CONFIGS,
   getRedditPost,
   generateScript,
@@ -18,8 +19,11 @@ import {
   renderVideo,
   getImageStatus,
   generateMetadata,
+  extractCharacters,
+  updateCharacters,
   AnimatedBackground,
   AudioGenerationStep,
+  CharacterEditor,
   DarkModeToggle,
   Footer,
   Header,
@@ -44,6 +48,8 @@ function App() {
   const [loadingSample, setLoadingSample] = useState<Voice | null>(null)
   const [playingVoice, setPlayingVoice] = useState<Voice | null>(null)
   const [imageStatus, setImageStatus] = useState<ImageStatusResponse | undefined>()
+  const [characterConfig, setCharacterConfig] = useState<CharacterConfig | undefined>()
+  const [useCharacterConsistency, setUseCharacterConsistency] = useState(true)
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -89,6 +95,13 @@ function App() {
     mutationFn: generateMetadata,
   })
 
+  const characterMutation = useMutation({
+    mutationFn: extractCharacters,
+    onSuccess: (data) => {
+      setCharacterConfig(data)
+    },
+  })
+
   // Poll for image generation progress while images are being generated
   useEffect(() => {
     if (!scriptMutation.data?.id || !imageMutation.isPending) {
@@ -123,13 +136,45 @@ function App() {
       imageMutation.reset()
       videoMutation.reset()
       metadataMutation.reset()
+      characterMutation.reset()
+      setCharacterConfig(undefined)
     }
   }
 
   const handleGenerateScript = () => {
     if (data) {
-      scriptMutation.mutate(data)
+      scriptMutation.mutate(data, {
+        onSuccess: (script) => {
+          // Auto-extract characters after script generation
+          characterMutation.mutate({
+            scriptId: script.id,
+            sourceContent: data.plainText,
+          })
+        },
+      })
     }
+  }
+
+  const handleExtractCharacters = () => {
+    if (scriptMutation.data && data) {
+      characterMutation.mutate({
+        scriptId: scriptMutation.data.id,
+        sourceContent: data.plainText,
+      })
+    }
+  }
+
+  const handleUpdateCharacters = async (
+    characters: CharacterConfig['characters'],
+    globalStyle?: string
+  ) => {
+    if (!scriptMutation.data) return
+    const updated = await updateCharacters({
+      scriptId: scriptMutation.data.id,
+      characters,
+      globalStyle,
+    })
+    setCharacterConfig(updated)
   }
 
   const handleGenerateAudio = () => {
@@ -192,6 +237,7 @@ function App() {
         scriptId: scriptMutation.data.id,
         imageSize: config.imageSize,
         provider: imageProvider,
+        useCharacterConsistency: useCharacterConsistency && !!characterConfig,
       })
     }
   }
@@ -336,6 +382,15 @@ function App() {
         )}
 
         {scriptMutation.data && (
+          <CharacterEditor
+            characterConfig={characterConfig}
+            isExtracting={characterMutation.isPending}
+            onExtract={handleExtractCharacters}
+            onUpdate={handleUpdateCharacters}
+          />
+        )}
+
+        {scriptMutation.data && (
           <ImageGenerationStep
             sceneCount={scriptMutation.data.scenes.length}
             imageResult={imageMutation.data}
@@ -350,6 +405,9 @@ function App() {
               imageMutation.reset()
               handleGenerateImages()
             }}
+            characterConfig={characterConfig}
+            useCharacterConsistency={useCharacterConsistency}
+            onCharacterConsistencyChange={setUseCharacterConsistency}
           />
         )}
 

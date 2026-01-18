@@ -20,6 +20,7 @@ interface ImageRequest {
   quality?: ImageQuality
   style?: ImageStyle
   provider?: ImageProvider
+  useCharacterConsistency?: boolean
 }
 
 export const Route = createFileRoute('/api/generate-images')({
@@ -47,6 +48,10 @@ export const Route = createFileRoute('/api/generate-images')({
           const provider = body.provider || 'dall-e'
           let result: ImageGenerationResult | SeeDreamGenerationResult
 
+          // Get character config if consistency is enabled (defaults to true if config exists)
+          const useConsistency = body.useCharacterConsistency ?? !!storedScript.characterConfig
+          const characterConfig = useConsistency ? storedScript.characterConfig : undefined
+
           if (provider === 'seedream') {
             // Map DALL-E size to SeeDream size
             const sizeMap: Record<string, '1K' | '2K' | '4K'> = {
@@ -62,6 +67,7 @@ export const Route = createFileRoute('/api/generate-images')({
               {
                 size: seedreamSize,
                 watermark: false,
+                characterConfig,
               }
             )
           } else {
@@ -72,6 +78,7 @@ export const Route = createFileRoute('/api/generate-images')({
                 size: body.size,
                 quality: body.quality,
                 style: body.style,
+                characterConfig,
               }
             )
           }
