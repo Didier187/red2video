@@ -22,8 +22,15 @@ export interface GeneratedSeeDreamImage {
   fileName: string
 }
 
+export interface FailedSeeDreamImage {
+  sceneIndex: number
+  prompt: string
+  error: string
+}
+
 export interface SeeDreamGenerationResult {
   images: GeneratedSeeDreamImage[]
+  failedImages: FailedSeeDreamImage[]
   totalScenes: number
 }
 
@@ -118,60 +125,85 @@ export async function generateSeeDreamImagesForScenes(
   options: SeeDreamOptions = {}
 ): Promise<SeeDreamGenerationResult> {
   const imagesDir = await ensureMediaDir(scriptId)
-  const images: GeneratedSeeDreamImage[] = []
   const { characterConfig, ...imageOptions } = options
 
-  for (let i = 0; i < scenes.length; i++) {
-    const scene = scenes[i]
-    const fileName = `scene-${String(i + 1).padStart(2, '0')}.png`
+  // Prepare all generation tasks
+  const generateImageTask = async (
+    scene: { imagePrompt: string },
+    index: number
+  ): Promise<GeneratedSeeDreamImage> => {
+    const fileName = `scene-${String(index + 1).padStart(2, '0')}.png`
     const filePath = path.join(imagesDir, fileName)
 
     // Enhance prompt with character consistency if config is provided
     const finalPrompt = characterConfig
-      ? enhancePromptWithCharacters(scene.imagePrompt, characterConfig, i)
+      ? enhancePromptWithCharacters(scene.imagePrompt, characterConfig, index)
       : scene.imagePrompt
 
-    try {
-      const imageBuffer = await generateSeeDreamImage(finalPrompt, imageOptions)
-      await fs.writeFile(filePath, imageBuffer)
+    const imageBuffer = await generateSeeDreamImage(finalPrompt, imageOptions)
+    await fs.writeFile(filePath, imageBuffer)
 
-      const generatedImage: GeneratedSeeDreamImage = {
-        sceneIndex: i,
-        prompt: scene.imagePrompt,
-        filePath,
-        fileName,
+    return {
+      sceneIndex: index,
+      prompt: scene.imagePrompt,
+      filePath,
+      fileName,
+    }
+  }
+
+  // Run all image generations in parallel using Promise.allSettled
+  const results = await Promise.allSettled(
+    scenes.map((scene, index) => generateImageTask(scene, index))
+  )
+
+  // Separate successful and failed results
+  const images: GeneratedSeeDreamImage[] = []
+  const failedImages: FailedSeeDreamImage[] = []
+
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      images.push(result.value)
+    } else {
+      const errorMessage =
+        result.reason instanceof Error ? result.reason.message : String(result.reason)
+      console.error(`Failed to generate SeeDream image for scene ${index + 1}:`, errorMessage)
+      failedImages.push({
+        sceneIndex: index,
+        prompt: scenes[index].imagePrompt,
+        error: errorMessage,
+      })
+    }
+  })
+
+  // Update script store with all successful images
+  if (images.length > 0) {
+    const currentScript = await getScript(scriptId)
+    if (currentScript) {
+      const existingMedia = currentScript.media?.scenes || []
+      const updatedScenes = [...existingMedia]
+
+      // Ensure array has enough slots
+      while (updatedScenes.length < scenes.length) {
+        updatedScenes.push({})
       }
-      images.push(generatedImage)
 
-      // Update script store with this image immediately so UI can show it
-      const currentScript = await getScript(scriptId)
-      if (currentScript) {
-        const existingMedia = currentScript.media?.scenes || []
-        const updatedScenes = [...existingMedia]
-
-        // Ensure array has enough slots
-        while (updatedScenes.length <= i) {
-          updatedScenes.push({})
+      // Update all successful images
+      for (const image of images) {
+        updatedScenes[image.sceneIndex] = {
+          ...updatedScenes[image.sceneIndex],
+          imagePath: image.filePath,
         }
-
-        // Update this scene's image path
-        updatedScenes[i] = {
-          ...updatedScenes[i],
-          imagePath: filePath,
-        }
-
-        await updateScript(scriptId, {
-          media: { scenes: updatedScenes },
-        })
       }
-    } catch (error) {
-      console.error(`Failed to generate SeeDream image for scene ${i + 1}:`, error)
-      throw error
+
+      await updateScript(scriptId, {
+        media: { scenes: updatedScenes },
+      })
     }
   }
 
   return {
     images,
+    failedImages,
     totalScenes: scenes.length,
   }
 }

@@ -44,8 +44,15 @@ export interface GeneratedImage {
   fileName: string
 }
 
+export interface FailedImage {
+  sceneIndex: number
+  prompt: string
+  error: string
+}
+
 export interface ImageGenerationResult {
   images: GeneratedImage[]
+  failedImages: FailedImage[]
   totalScenes: number
 }
 

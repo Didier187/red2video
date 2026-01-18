@@ -83,21 +83,25 @@ export const Route = createFileRoute('/api/generate-images')({
             )
           }
 
-          // Update script with image paths
-          const sceneMedia = result.images.map((img) => ({
-            imagePath: img.filePath,
-          }))
-
+          // Update script with image paths for successful images only
           // Re-fetch script to get latest media state (in case audio was generated during image generation)
           const latestScript = await getScript(body.scriptId)
           const existingMedia = latestScript?.media?.scenes || []
-          const mergedMedia = storedScript.script.scenes.map((_, i) => ({
-            ...existingMedia[i],
-            ...sceneMedia[i],
-          }))
+
+          // Build merged media - only update scenes that have successful images
+          const mergedMedia = storedScript.script.scenes.map((_, i) => {
+            const successfulImage = result.images.find((img) => img.sceneIndex === i)
+            return {
+              ...existingMedia[i],
+              ...(successfulImage ? { imagePath: successfulImage.filePath } : {}),
+            }
+          })
+
+          // Only mark as complete if all images were generated successfully
+          const allSuccessful = result.failedImages.length === 0
 
           await updateScript(body.scriptId, {
-            imagesGenerated: true,
+            imagesGenerated: allSuccessful,
             media: { scenes: mergedMedia },
           })
 

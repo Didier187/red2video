@@ -25,6 +25,9 @@ export interface VideoRenderOptions {
   quality?: 'low' | 'medium' | 'high'
   width?: number
   height?: number
+  channelName?: string
+  socialHandle?: string
+  showOutro?: boolean
 }
 
 export interface VideoRenderResult {
@@ -69,6 +72,9 @@ export async function renderVideo(options: VideoRenderOptions): Promise<VideoRen
     quality = 'medium',
     width = 1920,
     height = 1080,
+    channelName,
+    socialHandle,
+    showOutro = true,
   } = options
 
   const qualitySettings = QUALITY_SETTINGS[quality]
@@ -123,15 +129,16 @@ export async function renderVideo(options: VideoRenderOptions): Promise<VideoRen
 
   // Calculate duration - prefer actual audio duration over durationHint
   const titleDuration = 4
+  const outroDuration = showOutro ? 5 : 0
   const scenesDuration = scenes.reduce((acc, scene) => {
     // Use actual audio duration if available, otherwise fall back to durationHint
     const sceneDuration = scene.duration ?? scene.durationHint
     return acc + sceneDuration
   }, 0)
-  const totalDuration = titleDuration + scenesDuration
+  const totalDuration = titleDuration + scenesDuration + outroDuration
   const durationInFrames = Math.round(totalDuration * qualitySettings.fps)
 
-  console.log(`Video duration: ${totalDuration.toFixed(2)}s (title: ${titleDuration}s, scenes: ${scenesDuration.toFixed(2)}s)`)
+  console.log(`Video duration: ${totalDuration.toFixed(2)}s (title: ${titleDuration}s, scenes: ${scenesDuration.toFixed(2)}s, outro: ${outroDuration}s)`)
   console.log('Selecting composition...')
 
   // Select the composition
@@ -142,6 +149,9 @@ export async function renderVideo(options: VideoRenderOptions): Promise<VideoRen
       title,
       scenes: scenesWithDataUrls,
       scriptId,
+      channelName,
+      socialHandle,
+      showOutro,
     },
   })
 
@@ -164,6 +174,9 @@ export async function renderVideo(options: VideoRenderOptions): Promise<VideoRen
       title,
       scenes: scenesWithDataUrls,
       scriptId,
+      channelName,
+      socialHandle,
+      showOutro,
     },
     crf: qualitySettings.crf,
     onProgress: ({ progress }) => {
