@@ -1,5 +1,15 @@
 import React from 'react'
-import { AbsoluteFill, Img, Audio, useCurrentFrame, useVideoConfig, interpolate } from 'remotion'
+import {
+  AbsoluteFill,
+  Img,
+  Audio,
+  useCurrentFrame,
+  useVideoConfig,
+  interpolate,
+  spring,
+  Easing,
+} from 'remotion'
+import { fonts } from './fonts'
 
 interface SceneProps {
   text: string
@@ -19,40 +29,68 @@ export const Scene: React.FC<SceneProps> = ({
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
 
-  // Fade in/out effect
-  const opacity = interpolate(
+  // Smooth fade in using spring (no bounce)
+  const fadeInSpring = spring({
     frame,
-    [0, fps * 0.5, durationInFrames - fps * 0.5, durationInFrames],
-    [0, 1, 1, 0],
-    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+    fps,
+    config: { damping: 200 },
+    durationInFrames: Math.round(fps * 0.5),
+  })
+
+  // Fade out with easing
+  const fadeOut = interpolate(
+    frame,
+    [durationInFrames - fps * 0.5, durationInFrames],
+    [1, 0],
+    {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+      easing: Easing.in(Easing.quad),
+    },
   )
 
-  // Subtle zoom effect on image
-  const scale = interpolate(frame, [0, durationInFrames], [1, 1.05], {
+  // Combined opacity (fade in then fade out)
+  const opacity = frame < durationInFrames - fps * 0.5 ? fadeInSpring : fadeOut
+
+  // Subtle zoom effect on image with easing
+  const scale = interpolate(frame, [0, durationInFrames], [1, 1.08], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
+    easing: Easing.out(Easing.quad),
   })
 
-  // Text animation
-  const textY = interpolate(frame, [0, fps * 0.3], [20, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
+  // Text animation with spring
+  const textSpring = spring({
+    frame,
+    fps,
+    config: { damping: 200 },
+    durationInFrames: Math.round(fps * 0.4),
   })
+  const textY = interpolate(textSpring, [0, 1], [30, 0])
 
   // CTA animation for last scene (appears in last 2.5 seconds)
   const ctaStartFrame = durationInFrames - fps * 2.5
+  const ctaSpring = spring({
+    frame: frame - ctaStartFrame,
+    fps,
+    config: { damping: 12, stiffness: 100 },
+  })
   const ctaOpacity = isLastScene
     ? interpolate(frame, [ctaStartFrame, ctaStartFrame + fps * 0.4], [0, 1], {
         extrapolateLeft: 'clamp',
         extrapolateRight: 'clamp',
       })
     : 0
-  const ctaScale = isLastScene
-    ? interpolate(frame, [ctaStartFrame, ctaStartFrame + fps * 0.5], [0.8, 1], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-      })
-    : 1
+  const ctaScale = isLastScene ? interpolate(ctaSpring, [0, 1], [0.8, 1]) : 1
+
+  // Audio volume fade in/out for smooth transitions
+  const audioVolume = (f: number) =>
+    interpolate(
+      f,
+      [0, fps * 0.2, durationInFrames - fps * 0.3, durationInFrames],
+      [0, 1, 1, 0],
+      { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' },
+    )
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#0a0a0a' }}>
@@ -75,8 +113,9 @@ export const Scene: React.FC<SceneProps> = ({
               bottom: 0,
               left: 0,
               right: 0,
-              height: '40%',
-              background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+              height: '50%',
+              background:
+                'linear-gradient(transparent, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.9))',
             }}
           />
         </AbsoluteFill>
@@ -100,7 +139,7 @@ export const Scene: React.FC<SceneProps> = ({
         >
           <p
             style={{
-              fontFamily: 'IBM Plex Mono, monospace',
+              fontFamily: fonts.ibmPlex,
               fontSize: 36,
               color: 'white',
               textShadow: '2px 2px 8px rgba(0,0,0,0.8)',
@@ -135,7 +174,7 @@ export const Scene: React.FC<SceneProps> = ({
           >
             <p
               style={{
-                fontFamily: 'IBM Plex Mono, monospace',
+                fontFamily: fonts.ibmPlex,
                 fontSize: 28,
                 color: 'white',
                 margin: 0,
@@ -153,8 +192,8 @@ export const Scene: React.FC<SceneProps> = ({
         </AbsoluteFill>
       )}
 
-      {/* Audio */}
-      {audioDataUrl && <Audio src={audioDataUrl} />}
+      {/* Audio with volume fade in/out */}
+      {audioDataUrl && <Audio src={audioDataUrl} volume={audioVolume} />}
     </AbsoluteFill>
   )
 }

@@ -1,5 +1,14 @@
 import React from 'react'
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate } from 'remotion'
+import {
+  AbsoluteFill,
+  useCurrentFrame,
+  useVideoConfig,
+  interpolate,
+  spring,
+  Easing,
+} from 'remotion'
+import { fonts } from './fonts'
+import { CornerBracket } from './CornerBracket'
 
 interface OutroCardProps {
   channelName?: string
@@ -13,42 +22,75 @@ export const OutroCard: React.FC<OutroCardProps> = ({
   const frame = useCurrentFrame()
   const { fps, durationInFrames } = useVideoConfig()
 
-  // Overall fade in/out
-  const opacity = interpolate(
+  // Overall fade in with spring
+  const fadeInSpring = spring({
     frame,
-    [0, fps * 0.5, durationInFrames - fps * 0.5, durationInFrames],
-    [0, 1, 1, 0],
-    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+    fps,
+    config: { damping: 200 },
+    durationInFrames: Math.round(fps * 0.5),
+  })
+
+  // Fade out with easing
+  const fadeOut = interpolate(
+    frame,
+    [durationInFrames - fps * 0.5, durationInFrames],
+    [1, 0],
+    {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+      easing: Easing.in(Easing.quad),
+    },
   )
 
-  // "Thanks for watching" text animation
-  const thanksY = interpolate(frame, [0, fps * 0.4], [30, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  })
-  const thanksOpacity = interpolate(frame, [0, fps * 0.4], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  })
+  // Combined opacity
+  const opacity = frame < durationInFrames - fps * 0.5 ? fadeInSpring : fadeOut
 
-  // Subscribe button animation (appears after text)
-  const buttonScale = interpolate(frame, [fps * 0.5, fps * 0.8], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
+  // "Thanks for watching" text animation with spring
+  const thanksSpring = spring({
+    frame,
+    fps,
+    config: { damping: 12, stiffness: 100 },
   })
+  const thanksY = interpolate(thanksSpring, [0, 1], [40, 0])
+  const thanksOpacity = interpolate(thanksSpring, [0, 1], [0, 1])
 
-  // Pulse effect for button (after it appears)
-  const pulsePhase = frame > fps * 0.8 ? Math.sin((frame - fps * 0.8) * 0.1) : 0
+  // Subscribe button animation with bouncy spring (appears after text)
+  const buttonSpring = spring({
+    frame: frame - Math.round(fps * 0.5),
+    fps,
+    config: { damping: 10, stiffness: 100 },
+  })
+  const buttonScale = interpolate(buttonSpring, [0, 1], [0, 1])
+
+  // Pulse effect for button (after it appears) - smoother sine wave
+  const pulsePhase =
+    frame > fps * 0.8 ? Math.sin((frame - fps * 0.8) * 0.08) : 0
   const buttonPulse = 1 + pulsePhase * 0.03
 
-  // Bell shake animation (after button fully appears)
-  const bellShake = frame > fps * 1.2 ? Math.sin(frame * 0.5) * 8 : 0
+  // Bell shake animation with spring-like dampening
+  const bellShakeIntensity =
+    frame > fps * 1.2
+      ? Math.sin((frame - fps * 1.2) * 0.4) *
+        Math.exp(-((frame - fps * 1.2) * 0.02))
+      : 0
+  const bellShake = bellShakeIntensity * 15
 
-  // Social/channel info animation (appears last)
-  const socialOpacity = interpolate(frame, [fps * 1.2, fps * 1.6], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
+  // Social/channel info animation with spring (appears last)
+  const socialSpring = spring({
+    frame: frame - Math.round(fps * 1.2),
+    fps,
+    config: { damping: 200 },
   })
+  const socialOpacity = interpolate(socialSpring, [0, 1], [0, 1])
+  const socialY = interpolate(socialSpring, [0, 1], [20, 0])
+
+  // Corner brackets scale in
+  const bracketSpring = spring({
+    frame: frame - Math.round(fps * 0.2),
+    fps,
+    config: { damping: 15, stiffness: 120 },
+  })
+  const bracketScale = interpolate(bracketSpring, [0, 1], [0, 1])
 
   return (
     <AbsoluteFill
@@ -103,7 +145,7 @@ export const OutroCard: React.FC<OutroCardProps> = ({
         >
           <h1
             style={{
-              fontFamily: 'Playfair Display, serif',
+              fontFamily: fonts.playfair,
               fontSize: 56,
               color: 'white',
               margin: 0,
@@ -140,13 +182,14 @@ export const OutroCard: React.FC<OutroCardProps> = ({
               fill="white"
               style={{
                 transform: `rotate(${bellShake}deg)`,
+                transformOrigin: 'top center',
               }}
             >
               <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" />
             </svg>
             <span
               style={{
-                fontFamily: 'IBM Plex Mono, monospace',
+                fontFamily: fonts.ibmPlex,
                 fontSize: 24,
                 color: 'white',
                 fontWeight: 600,
@@ -163,11 +206,12 @@ export const OutroCard: React.FC<OutroCardProps> = ({
         {channelName && (
           <p
             style={{
-              fontFamily: 'IBM Plex Mono, monospace',
+              fontFamily: fonts.ibmPlex,
               fontSize: 20,
               color: '#85d7ff',
               margin: 0,
               opacity: socialOpacity,
+              transform: `translateY(${socialY}px)`,
               letterSpacing: '0.05em',
             }}
           >
@@ -179,11 +223,12 @@ export const OutroCard: React.FC<OutroCardProps> = ({
         {socialHandle && (
           <p
             style={{
-              fontFamily: 'IBM Plex Mono, monospace',
+              fontFamily: fonts.ibmPlex,
               fontSize: 16,
               color: '#ff6e41',
               marginTop: 12,
               opacity: socialOpacity,
+              transform: `translateY(${socialY}px)`,
             }}
           >
             {socialHandle}
@@ -191,31 +236,47 @@ export const OutroCard: React.FC<OutroCardProps> = ({
         )}
       </div>
 
-      {/* Corner decorations */}
-      <div style={{ position: 'absolute', top: 40, left: 40 }}>
+      {/* Corner decorations with animated scale */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 40,
+          left: 40,
+          transform: `scale(${bracketScale})`,
+        }}
+      >
         <CornerBracket rotation={0} />
       </div>
-      <div style={{ position: 'absolute', top: 40, right: 40 }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: 40,
+          right: 40,
+          transform: `scale(${bracketScale})`,
+        }}
+      >
         <CornerBracket rotation={90} />
       </div>
-      <div style={{ position: 'absolute', bottom: 40, left: 40 }}>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 40,
+          left: 40,
+          transform: `scale(${bracketScale})`,
+        }}
+      >
         <CornerBracket rotation={-90} />
       </div>
-      <div style={{ position: 'absolute', bottom: 40, right: 40 }}>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 40,
+          right: 40,
+          transform: `scale(${bracketScale})`,
+        }}
+      >
         <CornerBracket rotation={180} />
       </div>
     </AbsoluteFill>
   )
 }
-
-const CornerBracket: React.FC<{ rotation: number }> = ({ rotation }) => (
-  <div
-    style={{
-      width: 30,
-      height: 30,
-      borderTop: '2px solid #85d7ff',
-      borderLeft: '2px solid #85d7ff',
-      transform: `rotate(${rotation}deg)`,
-    }}
-  />
-)

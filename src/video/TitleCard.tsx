@@ -1,5 +1,14 @@
 import React from 'react'
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate } from 'remotion'
+import {
+  AbsoluteFill,
+  useCurrentFrame,
+  useVideoConfig,
+  interpolate,
+  spring,
+  Easing,
+} from 'remotion'
+import { fonts } from './fonts'
+import { CornerBracket } from './CornerBracket'
 
 interface TitleCardProps {
   title: string
@@ -10,25 +19,53 @@ export const TitleCard: React.FC<TitleCardProps> = ({ title, subtitle }) => {
   const frame = useCurrentFrame()
   const { fps, durationInFrames } = useVideoConfig()
 
-  // Fade in/out
-  const opacity = interpolate(
+  // Smooth fade in with spring
+  const fadeInSpring = spring({
     frame,
-    [0, fps * 0.5, durationInFrames - fps * 0.5, durationInFrames],
-    [0, 1, 1, 0],
-    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+    fps,
+    config: { damping: 200 },
+    durationInFrames: Math.round(fps * 0.5),
+  })
+
+  // Fade out with easing
+  const fadeOut = interpolate(
+    frame,
+    [durationInFrames - fps * 0.5, durationInFrames],
+    [1, 0],
+    {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+      easing: Easing.in(Easing.quad),
+    },
   )
 
-  // Title animation
-  const titleY = interpolate(frame, [0, fps * 0.5], [40, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  })
+  // Combined opacity
+  const opacity = frame < durationInFrames - fps * 0.5 ? fadeInSpring : fadeOut
 
-  // Subtitle animation (delayed)
-  const subtitleOpacity = interpolate(frame, [fps * 0.3, fps * 0.6], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
+  // Title animation with spring (bouncy entrance)
+  const titleSpring = spring({
+    frame,
+    fps,
+    config: { damping: 12, stiffness: 100 },
   })
+  const titleY = interpolate(titleSpring, [0, 1], [50, 0])
+  const titleScale = interpolate(titleSpring, [0, 1], [0.9, 1])
+
+  // Subtitle animation (delayed, smooth)
+  const subtitleSpring = spring({
+    frame: frame - Math.round(fps * 0.3),
+    fps,
+    config: { damping: 200 },
+  })
+  const subtitleOpacity = interpolate(subtitleSpring, [0, 1], [0, 1])
+
+  // Corner brackets scale in
+  const bracketSpring = spring({
+    frame: frame - Math.round(fps * 0.2),
+    fps,
+    config: { damping: 15, stiffness: 120 },
+  })
+  const bracketScale = interpolate(bracketSpring, [0, 1], [0, 1])
 
   return (
     <AbsoluteFill
@@ -64,14 +101,14 @@ export const TitleCard: React.FC<TitleCardProps> = ({ title, subtitle }) => {
       {/* Title */}
       <div
         style={{
-          transform: `translateY(${titleY}px)`,
+          transform: `translateY(${titleY}px) scale(${titleScale})`,
           textAlign: 'center',
           zIndex: 1,
         }}
       >
         <h1
           style={{
-            fontFamily: 'Playfair Display, serif',
+            fontFamily: fonts.playfair,
             fontSize: 72,
             color: 'white',
             margin: 0,
@@ -83,7 +120,7 @@ export const TitleCard: React.FC<TitleCardProps> = ({ title, subtitle }) => {
         {subtitle && (
           <p
             style={{
-              fontFamily: 'IBM Plex Mono, monospace',
+              fontFamily: fonts.ibmPlex,
               fontSize: 18,
               color: '#85d7ff',
               marginTop: 20,
@@ -97,31 +134,47 @@ export const TitleCard: React.FC<TitleCardProps> = ({ title, subtitle }) => {
         )}
       </div>
 
-      {/* Corner decorations */}
-      <div style={{ position: 'absolute', top: 40, left: 40 }}>
+      {/* Corner decorations with animated scale */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 40,
+          left: 40,
+          transform: `scale(${bracketScale})`,
+        }}
+      >
         <CornerBracket rotation={0} />
       </div>
-      <div style={{ position: 'absolute', top: 40, right: 40 }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: 40,
+          right: 40,
+          transform: `scale(${bracketScale})`,
+        }}
+      >
         <CornerBracket rotation={90} />
       </div>
-      <div style={{ position: 'absolute', bottom: 40, left: 40 }}>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 40,
+          left: 40,
+          transform: `scale(${bracketScale})`,
+        }}
+      >
         <CornerBracket rotation={-90} />
       </div>
-      <div style={{ position: 'absolute', bottom: 40, right: 40 }}>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 40,
+          right: 40,
+          transform: `scale(${bracketScale})`,
+        }}
+      >
         <CornerBracket rotation={180} />
       </div>
     </AbsoluteFill>
   )
 }
-
-const CornerBracket: React.FC<{ rotation: number }> = ({ rotation }) => (
-  <div
-    style={{
-      width: 30,
-      height: 30,
-      borderTop: '2px solid #85d7ff',
-      borderLeft: '2px solid #85d7ff',
-      transform: `rotate(${rotation}deg)`,
-    }}
-  />
-)

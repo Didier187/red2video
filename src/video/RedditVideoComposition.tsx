@@ -1,91 +1,133 @@
 import React from 'react'
-import { Composition, AbsoluteFill, Sequence } from 'remotion'
+import { Composition, AbsoluteFill } from 'remotion'
+import { TransitionSeries, linearTiming } from '@remotion/transitions'
+import { fade } from '@remotion/transitions/fade'
 import { Scene } from './Scene'
 import { TitleCard } from './TitleCard'
 import { OutroCard } from './OutroCard'
 import { SceneData } from './types'
+import { z } from 'zod'
 
 const FPS = 30
 const TITLE_DURATION_SECONDS = 4
 const OUTRO_DURATION_SECONDS = 5
+const TRANSITION_DURATION_FRAMES = 15
 
-interface VideoProps {
-  title: string
-  scenes: SceneData[]
-  scriptId: string
-  channelName?: string
-  socialHandle?: string
-  showOutro?: boolean
-}
+// Zod schema for props validation
+const sceneDataSchema = z.object({
+  text: z.string(),
+  imagePrompt: z.string(),
+  durationHint: z.number(),
+  duration: z.number().optional(),
+  imagePath: z.string().optional(),
+  audioPath: z.string().optional(),
+  imageDataUrl: z.string().optional(),
+  audioDataUrl: z.string().optional(),
+})
 
-export const RedditVideo = ({
+const videoPropsSchema = z.object({
+  title: z.string(),
+  scenes: z.array(sceneDataSchema),
+  scriptId: z.string(),
+  channelName: z.string().optional(),
+  socialHandle: z.string().optional(),
+  showOutro: z.boolean().optional(),
+})
+
+type VideoProps = z.infer<typeof videoPropsSchema>
+
+export const RedditVideo: React.FC<VideoProps> = ({
   title,
   scenes,
   channelName,
   socialHandle,
   showOutro = true,
-}: VideoProps) => {
+}) => {
   const titleDurationInFrames = TITLE_DURATION_SECONDS * FPS
   const outroDurationInFrames = OUTRO_DURATION_SECONDS * FPS
 
-  let currentFrame = titleDurationInFrames
-
-  // Calculate the frame where scenes end (for outro positioning)
-  const scenesEndFrame =
-    titleDurationInFrames +
-    scenes.reduce((acc, scene) => {
-      const sceneDuration = scene.duration ?? scene.durationHint
-      return acc + Math.round(sceneDuration * FPS)
-    }, 0)
+  // Calculate scene durations
+  const sceneDurations = scenes.map((scene) => {
+    const sceneDuration = scene.duration ?? scene.durationHint
+    return Math.round(sceneDuration * FPS)
+  })
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#0a0a0a' }}>
-      {/* Title Card */}
-      <Sequence from={0} durationInFrames={titleDurationInFrames}>
-        <TitleCard title={title} subtitle="Reddit Story" />
-      </Sequence>
+      <TransitionSeries>
+        {/* Title Card */}
+        <TransitionSeries.Sequence durationInFrames={titleDurationInFrames}>
+          <TitleCard title={title} subtitle="Reddit Story" />
+        </TransitionSeries.Sequence>
 
-      {/* Scenes */}
-      {scenes.map((scene, index) => {
-        // Use actual audio duration if available, otherwise fall back to durationHint
-        const sceneDuration = scene.duration ?? scene.durationHint
-        const durationInFrames = Math.round(sceneDuration * FPS)
-        const startFrame = currentFrame
-        const isLastScene = index === scenes.length - 1
+        {/* Scenes with transitions */}
+        {scenes.map((scene, index) => {
+          const durationInFrames = sceneDurations[index]
+          const isLastScene = index === scenes.length - 1
 
-        currentFrame += durationInFrames
+          return (
+            <React.Fragment key={index}>
+              <TransitionSeries.Transition
+                presentation={fade()}
+                timing={linearTiming({
+                  durationInFrames: TRANSITION_DURATION_FRAMES,
+                })}
+              />
+              <TransitionSeries.Sequence durationInFrames={durationInFrames}>
+                <Scene
+                  text={scene.text}
+                  imageDataUrl={scene.imageDataUrl}
+                  audioDataUrl={scene.audioDataUrl}
+                  durationInFrames={durationInFrames}
+                  isLastScene={isLastScene && !showOutro}
+                />
+              </TransitionSeries.Sequence>
+            </React.Fragment>
+          )
+        })}
 
-        return (
-          <Sequence key={index} from={startFrame} durationInFrames={durationInFrames}>
-            <Scene
-              text={scene.text}
-              imageDataUrl={scene.imageDataUrl}
-              audioDataUrl={scene.audioDataUrl}
-              durationInFrames={durationInFrames}
-              isLastScene={isLastScene}
+        {/* Outro Card */}
+        {showOutro && (
+          <>
+            <TransitionSeries.Transition
+              presentation={fade()}
+              timing={linearTiming({
+                durationInFrames: TRANSITION_DURATION_FRAMES,
+              })}
             />
-          </Sequence>
-        )
-      })}
-
-      {/* Outro Card */}
-      {showOutro && (
-        <Sequence from={scenesEndFrame} durationInFrames={outroDurationInFrames}>
-          <OutroCard channelName={channelName} socialHandle={socialHandle} />
-        </Sequence>
-      )}
+            <TransitionSeries.Sequence durationInFrames={outroDurationInFrames}>
+              <OutroCard
+                channelName={channelName}
+                socialHandle={socialHandle}
+              />
+            </TransitionSeries.Sequence>
+          </>
+        )}
+      </TransitionSeries>
     </AbsoluteFill>
   )
 }
 
-// Calculate total duration from scenes - prefer actual audio duration
-function calculateTotalDuration(scenes: SceneData[], showOutro: boolean = true): number {
+// Calculate total duration from scenes - accounting for transition overlaps
+function calculateTotalDuration(
+  scenes: SceneData[],
+  showOutro: boolean = true,
+): number {
   const scenesDuration = scenes.reduce((acc, scene) => {
-    // Use actual audio duration if available, otherwise fall back to durationHint
     return acc + (scene.duration ?? scene.durationHint)
   }, 0)
   const outroDuration = showOutro ? OUTRO_DURATION_SECONDS : 0
-  return Math.round((TITLE_DURATION_SECONDS + scenesDuration + outroDuration) * FPS)
+
+  // Total frames before transitions
+  const totalFrames = Math.round(
+    (TITLE_DURATION_SECONDS + scenesDuration + outroDuration) * FPS,
+  )
+
+  // Subtract transition overlaps
+  const numTransitions = scenes.length + (showOutro ? 1 : 0)
+  const transitionOverlap = numTransitions * TRANSITION_DURATION_FRAMES
+
+  return totalFrames - transitionOverlap
 }
 
 // Root component for Remotion
@@ -94,12 +136,12 @@ export const RemotionRoot: React.FC = () => {
     <>
       <Composition
         id="RedditVideo"
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        component={RedditVideo as any}
+        component={RedditVideo}
         durationInFrames={300}
         fps={FPS}
         width={1920}
         height={1080}
+        schema={videoPropsSchema}
         defaultProps={{
           title: 'Reddit Story',
           scenes: [] as SceneData[],
@@ -109,10 +151,12 @@ export const RemotionRoot: React.FC = () => {
           showOutro: true,
         }}
         calculateMetadata={async ({ props }) => {
-          const videoProps = props as unknown as VideoProps
-          const duration = calculateTotalDuration(videoProps.scenes, videoProps.showOutro ?? true)
+          const duration = calculateTotalDuration(
+            props.scenes,
+            props.showOutro ?? true,
+          )
           return {
-            durationInFrames: duration || 300,
+            durationInFrames: Math.max(duration, 300),
           }
         }}
       />
