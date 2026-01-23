@@ -3,7 +3,9 @@
     "allow": [
       "Bash(wc:*)",
       "Bash(npm test:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }
