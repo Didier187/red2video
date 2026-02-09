@@ -29,44 +29,25 @@ export const Scene: React.FC<SceneProps> = ({
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
 
-  // Smooth fade in using spring (no bounce)
-  const fadeInSpring = spring({
-    frame,
-    fps,
-    config: { damping: 200 },
-    durationInFrames: Math.round(fps * 0.5),
-  })
+  // No internal fade in/out — TransitionSeries handles cross-scene transitions.
+  // Only animate content entrance within the scene.
 
-  // Fade out with easing
-  const fadeOut = interpolate(
-    frame,
-    [durationInFrames - fps * 0.5, durationInFrames],
-    [1, 0],
-    {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-      easing: Easing.in(Easing.quad),
-    },
-  )
-
-  // Combined opacity (fade in then fade out)
-  const opacity = frame < durationInFrames - fps * 0.5 ? fadeInSpring : fadeOut
-
-  // Subtle zoom effect on image with easing
-  const scale = interpolate(frame, [0, durationInFrames], [1, 1.08], {
+  // Subtle Ken Burns zoom effect on image
+  const scale = interpolate(frame, [0, durationInFrames], [1, 1.06], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
     easing: Easing.out(Easing.quad),
   })
 
-  // Text animation with spring
+  // Text slides up with a smooth spring entrance
   const textSpring = spring({
     frame,
     fps,
     config: { damping: 200 },
-    durationInFrames: Math.round(fps * 0.4),
+    durationInFrames: Math.round(fps * 0.6),
   })
   const textY = interpolate(textSpring, [0, 1], [30, 0])
+  const textOpacity = interpolate(textSpring, [0, 1], [0, 1])
 
   // CTA animation for last scene (appears in last 2.5 seconds)
   const ctaStartFrame = durationInFrames - fps * 2.5
@@ -83,11 +64,11 @@ export const Scene: React.FC<SceneProps> = ({
     : 0
   const ctaScale = isLastScene ? interpolate(ctaSpring, [0, 1], [0.8, 1]) : 1
 
-  // Audio volume fade in/out for smooth transitions
+  // Audio volume: gentle fade-in (0.5s) and fade-out (0.6s) for smooth overlap
   const audioVolume = (f: number) =>
     interpolate(
       f,
-      [0, fps * 0.2, durationInFrames - fps * 0.3, durationInFrames],
+      [0, fps * 0.5, durationInFrames - fps * 0.6, durationInFrames],
       [0, 1, 1, 0],
       { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' },
     )
@@ -96,7 +77,7 @@ export const Scene: React.FC<SceneProps> = ({
     <AbsoluteFill style={{ backgroundColor: '#0a0a0a' }}>
       {/* Background Image */}
       {imageDataUrl && (
-        <AbsoluteFill style={{ opacity }}>
+        <AbsoluteFill>
           <Img
             src={imageDataUrl}
             style={{
@@ -127,12 +108,12 @@ export const Scene: React.FC<SceneProps> = ({
           justifyContent: 'flex-end',
           alignItems: 'center',
           padding: '0 80px 100px',
-          opacity,
         }}
       >
         <div
           style={{
             transform: `translateY(${textY}px)`,
+            opacity: textOpacity,
             maxWidth: '80%',
             textAlign: 'center',
           }}

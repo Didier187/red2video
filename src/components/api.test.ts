@@ -61,7 +61,8 @@ describe('API Client', () => {
 
       expect(result).toEqual(mockScriptContent)
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/reddit?url=https%3A%2F%2Freddit.com%2Fr%2Ftest%2Fcomments%2F123'
+        '/api/reddit?url=https%3A%2F%2Freddit.com%2Fr%2Ftest%2Fcomments%2F123',
+        undefined,
       )
     })
 
@@ -97,7 +98,8 @@ describe('API Client', () => {
       await getRedditPost({ url: 'https://reddit.com/r/test?param=value&other=123' })
 
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining(encodeURIComponent('https://reddit.com/r/test?param=value&other=123'))
+        expect.stringContaining(encodeURIComponent('https://reddit.com/r/test?param=value&other=123')),
+        undefined,
       )
     })
   })
@@ -246,7 +248,7 @@ describe('API Client', () => {
         json: () => Promise.resolve(mockImageResult),
       })
 
-      const result = await generateImages('script-123')
+      const result = await generateImages({ scriptId: 'script-123' })
 
       expect(result).toEqual(mockImageResult)
       expect(mockFetch).toHaveBeenCalledWith('/api/generate-images', {
@@ -257,6 +259,8 @@ describe('API Client', () => {
           size: '1792x1024',
           quality: 'standard',
           style: 'vivid',
+          provider: 'dall-e',
+          useCharacterConsistency: undefined,
         }),
       })
     })
@@ -268,7 +272,7 @@ describe('API Client', () => {
         json: () => Promise.resolve({ error: 'DALL-E API error' }),
       })
 
-      await expect(generateImages('script-123')).rejects.toThrow('DALL-E API error')
+      await expect(generateImages({ scriptId: 'script-123' })).rejects.toThrow('DALL-E API error')
     })
   })
 
@@ -285,7 +289,7 @@ describe('API Client', () => {
         json: () => Promise.resolve(mockRenderResult),
       })
 
-      const result = await renderVideo('script-123')
+      const result = await renderVideo({ scriptId: 'script-123' })
 
       expect(result).toEqual(mockRenderResult)
       expect(mockFetch).toHaveBeenCalledWith('/api/render-video', {
@@ -295,6 +299,8 @@ describe('API Client', () => {
           scriptId: 'script-123',
           quality: 'medium',
           outputFormat: 'mp4',
+          width: undefined,
+          height: undefined,
         }),
       })
     })
@@ -306,7 +312,7 @@ describe('API Client', () => {
         json: () => Promise.resolve({ error: 'Remotion render failed' }),
       })
 
-      await expect(renderVideo('script-123')).rejects.toThrow('Remotion render failed')
+      await expect(renderVideo({ scriptId: 'script-123' })).rejects.toThrow('Remotion render failed')
     })
   })
 
@@ -341,6 +347,7 @@ describe('API Client', () => {
           size: '1792x1024',
           quality: 'standard',
           style: 'vivid',
+          provider: 'dall-e',
         }),
       })
     })
@@ -377,7 +384,7 @@ describe('API Client', () => {
       const result = await getImageStatus('script-123')
 
       expect(result).toEqual(mockStatusResult)
-      expect(mockFetch).toHaveBeenCalledWith('/api/image-status/script-123')
+      expect(mockFetch).toHaveBeenCalledWith('/api/image-status/script-123', undefined)
     })
 
     it('should return isComplete: true when all images generated', async () => {

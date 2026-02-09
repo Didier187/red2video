@@ -20,14 +20,51 @@ export interface GeneratedAudio {
   duration?: number
 }
 
+export interface FailedAudio {
+  sceneIndex: number
+  text: string
+  error: string
+}
+
 export interface AudioGenerationResult {
   audios: GeneratedAudio[]
+  failedAudios: FailedAudio[]
   totalScenes: number
 }
 
 const TEMP_DIR = path.join(process.cwd(), '.temp-audio')
 
 const openai = new OpenAI()
+
+/**
+ * Simple concurrency limiter (no external dependencies).
+ * Returns a wrapper that ensures at most `concurrency` tasks run at once.
+ */
+function pLimit(concurrency: number) {
+  let active = 0
+  const queue: Array<() => void> = []
+
+  return function limit<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const run = async () => {
+        active++
+        try {
+          resolve(await fn())
+        } catch (err) {
+          reject(err)
+        } finally {
+          active--
+          if (queue.length > 0) queue.shift()!()
+        }
+      }
+      if (active < concurrency) {
+        run()
+      } else {
+        queue.push(run)
+      }
+    })
+  }
+}
 
 export async function generateAudioForText(
   text: string,
@@ -63,23 +100,46 @@ export async function generateAudioForScenes(
   scenes: Array<{ text: string }>,
   options: AudioGenerationOptions = {},
 ): Promise<AudioGenerationResult> {
+  const limit = pLimit(5)
+
+  // Run all audio generations in parallel (capped at 5 concurrent)
+  const results = await Promise.allSettled(
+    scenes.map((scene, index) =>
+      limit(async (): Promise<GeneratedAudio> => {
+        const { buffer, duration } = await generateAudioForText(scene.text, options)
+        return {
+          sceneIndex: index,
+          text: scene.text,
+          audioBase64: buffer.toString('base64'),
+          format: 'mp3',
+          duration,
+        }
+      }),
+    ),
+  )
+
+  // Separate successful and failed results
   const audios: GeneratedAudio[] = []
+  const failedAudios: FailedAudio[] = []
 
-  for (let i = 0; i < scenes.length; i++) {
-    const scene = scenes[i]
-    const { buffer, duration } = await generateAudioForText(scene.text, options)
-
-    audios.push({
-      sceneIndex: i,
-      text: scene.text,
-      audioBase64: buffer.toString('base64'),
-      format: 'mp3',
-      duration,
-    })
-  }
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      audios.push(result.value)
+    } else {
+      const errorMessage =
+        result.reason instanceof Error ? result.reason.message : String(result.reason)
+      console.error(`Failed to generate audio for scene ${index + 1}:`, errorMessage)
+      failedAudios.push({
+        sceneIndex: index,
+        text: scenes[index].text,
+        error: errorMessage,
+      })
+    }
+  })
 
   return {
     audios,
+    failedAudios,
     totalScenes: scenes.length,
   }
 }

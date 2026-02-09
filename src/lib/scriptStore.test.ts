@@ -7,6 +7,7 @@ vi.spyOn(fs.promises, 'writeFile')
 vi.spyOn(fs.promises, 'readFile')
 vi.spyOn(fs.promises, 'readdir')
 vi.spyOn(fs.promises, 'unlink')
+vi.spyOn(fs.promises, 'rename')
 
 import {
   saveScript,
@@ -23,6 +24,14 @@ const mockWriteFile = vi.mocked(fs.promises.writeFile)
 const mockReadFile = vi.mocked(fs.promises.readFile)
 const mockReaddir = vi.mocked(fs.promises.readdir)
 const mockUnlink = vi.mocked(fs.promises.unlink)
+const mockRename = vi.mocked(fs.promises.rename)
+
+/** Create a Node.js-style ENOENT error with a `.code` property */
+function enoentError(msg = 'ENOENT'): NodeJS.ErrnoException {
+  const err: NodeJS.ErrnoException = new Error(msg)
+  err.code = 'ENOENT'
+  return err
+}
 
 const mockScript: StoredScript['script'] = {
   title: 'Test Video Title',
@@ -39,6 +48,7 @@ describe('scriptStore', () => {
     vi.clearAllMocks()
     mockMkdir.mockResolvedValue(undefined as any)
     mockWriteFile.mockResolvedValue(undefined)
+    mockRename.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -131,19 +141,17 @@ describe('scriptStore', () => {
     })
 
     it('should return null when script does not exist', async () => {
-      mockReadFile.mockRejectedValue(new Error('ENOENT'))
+      mockReadFile.mockRejectedValue(enoentError())
 
       const result = await getScript('non-existent-id')
 
       expect(result).toBeNull()
     })
 
-    it('should return null on JSON parse error', async () => {
+    it('should throw on JSON parse error', async () => {
       mockReadFile.mockResolvedValue('invalid json {{{' as any)
 
-      const result = await getScript('bad-json-id')
-
-      expect(result).toBeNull()
+      await expect(getScript('bad-json-id')).rejects.toThrow()
     })
   })
 
@@ -173,7 +181,7 @@ describe('scriptStore', () => {
     })
 
     it('should return false when script does not exist', async () => {
-      mockReadFile.mockRejectedValue(new Error('ENOENT'))
+      mockReadFile.mockRejectedValue(enoentError())
 
       const result = await updateScript('non-existent-id', {
         audioGenerated: true,
@@ -248,7 +256,7 @@ describe('scriptStore', () => {
     })
 
     it('should return false when delete fails', async () => {
-      mockUnlink.mockRejectedValue(new Error('ENOENT'))
+      mockUnlink.mockRejectedValue(enoentError())
 
       const result = await deleteScript('non-existent-id')
 
@@ -312,7 +320,7 @@ describe('scriptStore', () => {
     })
 
     it('should return empty array on read error', async () => {
-      mockReaddir.mockRejectedValue(new Error('ENOENT'))
+      mockReaddir.mockRejectedValue(enoentError())
 
       const result = await listScripts()
 

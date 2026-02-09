@@ -17,6 +17,13 @@ export function clearProgress(scriptId: string) {
   progressStore.delete(scriptId)
 }
 
+function setProgressWithTTL(id: string, progress: number, stage: string) {
+  progressStore.set(id, { progress, stage })
+  if (progress >= 100 || stage === 'complete' || stage === 'error') {
+    setTimeout(() => progressStore.delete(id), 5 * 60 * 1000) // Clean up after 5 min
+  }
+}
+
 export interface VideoRenderOptions {
   scriptId: string
   title: string
@@ -40,6 +47,27 @@ const QUALITY_SETTINGS = {
   low: { crf: 28, fps: 24 },
   medium: { crf: 23, fps: 30 },
   high: { crf: 18, fps: 30 },
+}
+
+// Bundle caching to avoid re-bundling on every render
+let cachedBundleLocation: string | null = null
+
+async function getOrCreateBundle(): Promise<string> {
+  if (cachedBundleLocation) {
+    // Verify it still exists
+    try {
+      await fs.access(cachedBundleLocation)
+      return cachedBundleLocation
+    } catch {
+      cachedBundleLocation = null
+    }
+  }
+
+  cachedBundleLocation = await bundle({
+    entryPoint: path.join(process.cwd(), 'src/video/index.ts'),
+    webpackOverride: (config) => config,
+  })
+  return cachedBundleLocation
 }
 
 // Check if file exists
@@ -86,7 +114,7 @@ export async function renderVideo(options: VideoRenderOptions): Promise<VideoRen
   const outputPath = path.join(outputDir, `video.${outputFormat}`)
 
   console.log('Loading media files from .media-store...')
-  progressStore.set(scriptId, { progress: 0, stage: 'preparing' })
+  setProgressWithTTL(scriptId, 0, 'preparing')
 
   // Load all media files as base64 data URLs directly from .media-store
   const scenesWithDataUrls = await Promise.all(
@@ -116,27 +144,28 @@ export async function renderVideo(options: VideoRenderOptions): Promise<VideoRen
   console.log(`Media loaded: ${loadedImages} images, ${loadedAudio} audio files as base64`)
 
   console.log('Bundling Remotion project...')
-  progressStore.set(scriptId, { progress: 5, stage: 'bundling' })
+  setProgressWithTTL(scriptId, 5, 'bundling')
 
-  // Bundle the Remotion project (no public dir needed)
-  const bundleLocation = await bundle({
-    entryPoint: path.join(process.cwd(), 'src/video/index.ts'),
-    webpackOverride: (config) => config,
-  })
+  // Bundle the Remotion project (cached to avoid re-bundling)
+  const bundleLocation = await getOrCreateBundle()
 
   console.log('Bundle complete...')
-  progressStore.set(scriptId, { progress: 15, stage: 'composing' })
+  setProgressWithTTL(scriptId, 15, 'composing')
 
   // Calculate duration - prefer actual audio duration over durationHint
   const titleDuration = 4
   const outroDuration = showOutro ? 5 : 0
+  const transitionFrames = 24 // Must match TRANSITION_DURATION_FRAMES in RedditVideoComposition
   const scenesDuration = scenes.reduce((acc, scene) => {
     // Use actual audio duration if available, otherwise fall back to durationHint
     const sceneDuration = scene.duration ?? scene.durationHint
     return acc + sceneDuration
   }, 0)
-  const totalDuration = titleDuration + scenesDuration + outroDuration
-  const durationInFrames = Math.round(totalDuration * qualitySettings.fps)
+  const totalRawFrames = Math.round((titleDuration + scenesDuration + outroDuration) * qualitySettings.fps)
+  // Subtract transition overlaps (TransitionSeries overlaps adjacent scenes)
+  const numTransitions = scenes.length + (showOutro ? 1 : 0)
+  const durationInFrames = Math.max(totalRawFrames - numTransitions * transitionFrames, 300)
+  const totalDuration = durationInFrames / qualitySettings.fps
 
   console.log(`Video duration: ${totalDuration.toFixed(2)}s (title: ${titleDuration}s, scenes: ${scenesDuration.toFixed(2)}s, outro: ${outroDuration}s)`)
   console.log('Selecting composition...')
@@ -156,7 +185,7 @@ export async function renderVideo(options: VideoRenderOptions): Promise<VideoRen
   })
 
   console.log(`Rendering video: ${durationInFrames} frames at ${qualitySettings.fps}fps...`)
-  progressStore.set(scriptId, { progress: 20, stage: 'rendering' })
+  setProgressWithTTL(scriptId, 20, 'rendering')
 
   // Render the video
   await renderMedia({
@@ -182,13 +211,13 @@ export async function renderVideo(options: VideoRenderOptions): Promise<VideoRen
     onProgress: ({ progress }) => {
       // Scale progress from 20% to 95% during rendering
       const scaledProgress = Math.round(20 + progress * 75)
-      progressStore.set(scriptId, { progress: scaledProgress, stage: 'rendering' })
+      setProgressWithTTL(scriptId, scaledProgress, 'rendering')
       console.log(`Rendering progress: ${Math.round(progress * 100)}%`)
     },
   })
 
   console.log('Video rendering complete!')
-  progressStore.set(scriptId, { progress: 100, stage: 'complete' })
+  setProgressWithTTL(scriptId, 100, 'complete')
 
   return {
     videoPath: outputPath,

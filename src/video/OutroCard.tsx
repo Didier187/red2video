@@ -5,7 +5,6 @@ import {
   useVideoConfig,
   interpolate,
   spring,
-  Easing,
 } from 'remotion'
 import { fonts } from './fonts'
 import { CornerBracket } from './CornerBracket'
@@ -20,30 +19,7 @@ export const OutroCard: React.FC<OutroCardProps> = ({
   socialHandle,
 }) => {
   const frame = useCurrentFrame()
-  const { fps, durationInFrames } = useVideoConfig()
-
-  // Overall fade in with spring
-  const fadeInSpring = spring({
-    frame,
-    fps,
-    config: { damping: 200 },
-    durationInFrames: Math.round(fps * 0.5),
-  })
-
-  // Fade out with easing
-  const fadeOut = interpolate(
-    frame,
-    [durationInFrames - fps * 0.5, durationInFrames],
-    [1, 0],
-    {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-      easing: Easing.in(Easing.quad),
-    },
-  )
-
-  // Combined opacity
-  const opacity = frame < durationInFrames - fps * 0.5 ? fadeInSpring : fadeOut
+  const { fps } = useVideoConfig()
 
   // "Thanks for watching" text animation with spring
   const thanksSpring = spring({
@@ -98,7 +74,6 @@ export const OutroCard: React.FC<OutroCardProps> = ({
         backgroundColor: '#0a0a0a',
         justifyContent: 'center',
         alignItems: 'center',
-        opacity,
       }}
     >
       {/* Decorative rings */}

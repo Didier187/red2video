@@ -5,7 +5,6 @@ import {
   useVideoConfig,
   interpolate,
   spring,
-  Easing,
 } from 'remotion'
 import { fonts } from './fonts'
 import { CornerBracket } from './CornerBracket'
@@ -17,30 +16,9 @@ interface TitleCardProps {
 
 export const TitleCard: React.FC<TitleCardProps> = ({ title, subtitle }) => {
   const frame = useCurrentFrame()
-  const { fps, durationInFrames } = useVideoConfig()
+  const { fps } = useVideoConfig()
 
-  // Smooth fade in with spring
-  const fadeInSpring = spring({
-    frame,
-    fps,
-    config: { damping: 200 },
-    durationInFrames: Math.round(fps * 0.5),
-  })
-
-  // Fade out with easing
-  const fadeOut = interpolate(
-    frame,
-    [durationInFrames - fps * 0.5, durationInFrames],
-    [1, 0],
-    {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-      easing: Easing.in(Easing.quad),
-    },
-  )
-
-  // Combined opacity
-  const opacity = frame < durationInFrames - fps * 0.5 ? fadeInSpring : fadeOut
+  // No internal fade in/out — TransitionSeries handles cross-scene transitions.
 
   // Title animation with spring (bouncy entrance)
   const titleSpring = spring({
@@ -73,7 +51,6 @@ export const TitleCard: React.FC<TitleCardProps> = ({ title, subtitle }) => {
         backgroundColor: '#0a0a0a',
         justifyContent: 'center',
         alignItems: 'center',
-        opacity,
       }}
     >
       {/* Decorative rings */}

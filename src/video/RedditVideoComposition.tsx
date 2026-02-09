@@ -1,7 +1,9 @@
 import React from 'react'
 import { Composition, AbsoluteFill } from 'remotion'
-import { TransitionSeries, linearTiming } from '@remotion/transitions'
+import { TransitionSeries, springTiming } from '@remotion/transitions'
 import { fade } from '@remotion/transitions/fade'
+import { slide } from '@remotion/transitions/slide'
+import { wipe } from '@remotion/transitions/wipe'
 import { Scene } from './Scene'
 import { TitleCard } from './TitleCard'
 import { OutroCard } from './OutroCard'
@@ -11,7 +13,23 @@ import { z } from 'zod'
 const FPS = 30
 const TITLE_DURATION_SECONDS = 4
 const OUTRO_DURATION_SECONDS = 5
-const TRANSITION_DURATION_FRAMES = 15
+const TRANSITION_DURATION_FRAMES = 24 // ~0.8s at 30fps — smooth, unhurried
+
+// Varied transition presentations to keep the video visually interesting.
+// Each presentation type has different generic props (FadeProps, SlideProps, etc.),
+// so we cast to the base type that TransitionSeries.Transition accepts.
+type AnyPresentation = ReturnType<typeof fade>
+
+function getTransitionPresentation(index: number): AnyPresentation {
+  switch (index % 5) {
+    case 0: return fade()
+    case 1: return slide({ direction: 'from-right' }) as AnyPresentation
+    case 2: return slide({ direction: 'from-left' }) as AnyPresentation
+    case 3: return wipe({ direction: 'from-left' }) as AnyPresentation
+    case 4: return fade()
+    default: return fade()
+  }
+}
 
 // Zod schema for props validation
 const sceneDataSchema = z.object({
@@ -68,8 +86,9 @@ export const RedditVideo: React.FC<VideoProps> = ({
           return (
             <React.Fragment key={index}>
               <TransitionSeries.Transition
-                presentation={fade()}
-                timing={linearTiming({
+                presentation={getTransitionPresentation(index)}
+                timing={springTiming({
+                  config: { damping: 200 },
                   durationInFrames: TRANSITION_DURATION_FRAMES,
                 })}
               />
@@ -91,7 +110,8 @@ export const RedditVideo: React.FC<VideoProps> = ({
           <>
             <TransitionSeries.Transition
               presentation={fade()}
-              timing={linearTiming({
+              timing={springTiming({
+                config: { damping: 200 },
                 durationInFrames: TRANSITION_DURATION_FRAMES,
               })}
             />

@@ -9,6 +9,7 @@ import {
   type AspectRatio,
   type ImageProvider,
   type CharacterConfig,
+  type GeneratedImage,
   ASPECT_RATIO_CONFIGS,
   getRedditPost,
   generateScript,
@@ -50,6 +51,8 @@ function App() {
   const [imageStatus, setImageStatus] = useState<ImageStatusResponse | undefined>()
   const [characterConfig, setCharacterConfig] = useState<CharacterConfig | undefined>()
   const [useCharacterConsistency, setUseCharacterConsistency] = useState(true)
+  const [imageOverrides, setImageOverrides] = useState<Record<number, GeneratedImage>>({})
+  const [scriptOverride, setScriptOverride] = useState<YouTubeScript | undefined>()
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -110,7 +113,7 @@ function App() {
 
     const pollInterval = setInterval(async () => {
       try {
-        const status = await getImageStatus(scriptMutation.data!.id)
+        const status = await getImageStatus(currentScript!.id)
         setImageStatus(status)
       } catch (err) {
         console.error('Failed to fetch image status:', err)
@@ -138,6 +141,8 @@ function App() {
       metadataMutation.reset()
       characterMutation.reset()
       setCharacterConfig(undefined)
+      setImageOverrides({})
+      setScriptOverride(undefined)
     }
   }
 
@@ -158,7 +163,7 @@ function App() {
   const handleExtractCharacters = () => {
     if (scriptMutation.data && data) {
       characterMutation.mutate({
-        scriptId: scriptMutation.data.id,
+        scriptId: currentScript!.id,
         sourceContent: data.plainText,
       })
     }
@@ -170,7 +175,7 @@ function App() {
   ) => {
     if (!scriptMutation.data) return
     const updated = await updateCharacters({
-      scriptId: scriptMutation.data.id,
+      scriptId: currentScript!.id,
       characters,
       globalStyle,
     })
@@ -180,7 +185,7 @@ function App() {
   const handleGenerateAudio = () => {
     if (scriptMutation.data) {
       audioMutation.mutate({
-        scriptId: scriptMutation.data.id,
+        scriptId: currentScript!.id,
         voice: selectedVoice,
       })
     }
@@ -234,7 +239,7 @@ function App() {
     if (scriptMutation.data) {
       const config = ASPECT_RATIO_CONFIGS[aspectRatio]
       imageMutation.mutate({
-        scriptId: scriptMutation.data.id,
+        scriptId: currentScript!.id,
         imageSize: config.imageSize,
         provider: imageProvider,
         useCharacterConsistency: useCharacterConsistency && !!characterConfig,
@@ -246,7 +251,7 @@ function App() {
     if (scriptMutation.data) {
       const config = ASPECT_RATIO_CONFIGS[aspectRatio]
       videoMutation.mutate({
-        scriptId: scriptMutation.data.id,
+        scriptId: currentScript!.id,
         videoWidth: config.videoWidth,
         videoHeight: config.videoHeight,
       })
@@ -257,37 +262,32 @@ function App() {
     if (!scriptMutation.data) return
 
     const result = await regenerateImage({
-      scriptId: scriptMutation.data.id,
+      scriptId: currentScript!.id,
       sceneIndex,
       prompt: newPrompt,
       provider: imageProvider,
     })
 
-    // Update the imageMutation data with the new image info
-    if (imageMutation.data) {
-      const updatedImages = imageMutation.data.images.map((img) =>
-        img.sceneIndex === sceneIndex ? result : img
-      )
-      imageMutation.data.images = updatedImages
-    }
+    // Track the regenerated image as an override instead of mutating React Query data
+    setImageOverrides(prev => ({ ...prev, [sceneIndex]: result }))
   }
 
   const handleScriptUpdate = (updatedScript: YouTubeScript) => {
-    // Update the mutation data with the edited script
+    // Track the edited script as an override instead of mutating React Query data
     // This allows users to edit the script before generating audio/images
-    scriptMutation.data = updatedScript
+    setScriptOverride(updatedScript)
   }
 
   const handleDownloadVideo = async () => {
     if (!scriptMutation.data || !videoMutation.data) return
 
-    const url = `/api/media/${scriptMutation.data.id}/video/${videoMutation.data.fileName}`
+    const url = `/api/media/${currentScript!.id}/video/${videoMutation.data.fileName}`
     const response = await fetch(url)
     const blob = await response.blob()
     const downloadUrl = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = downloadUrl
-    a.download = `${scriptMutation.data.title.replace(/[^a-z0-9]/gi, '_')}.mp4`
+    a.download = `${currentScript!.title.replace(/[^a-z0-9]/gi, '_')}.mp4`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -297,7 +297,7 @@ function App() {
   const handleGenerateMetadata = () => {
     if (scriptMutation.data && data) {
       metadataMutation.mutate({
-        scriptId: scriptMutation.data.id,
+        scriptId: currentScript!.id,
         sourceContent: data.plainText,
       })
     }
@@ -337,6 +337,13 @@ function App() {
     return 'pending'
   }
 
+  // Derived values that merge overrides with React Query data
+  const currentScript = scriptOverride ?? scriptMutation.data
+  const mergedImageResult = imageMutation.data ? {
+    ...imageMutation.data,
+    images: imageMutation.data.images.map(img => imageOverrides[img.sceneIndex] ?? img),
+  } : undefined
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       <DarkModeToggle darkMode={darkMode} onToggle={() => setDarkMode(!darkMode)} />
@@ -357,7 +364,7 @@ function App() {
         {data && (
           <ScriptGenerationStep
             data={data}
-            script={scriptMutation.data}
+            script={currentScript}
             isPending={scriptMutation.isPending}
             error={scriptMutation.error}
             onGenerate={handleGenerateScript}
@@ -367,7 +374,7 @@ function App() {
 
         {scriptMutation.data && (
           <AudioGenerationStep
-            sceneCount={scriptMutation.data.scenes.length}
+            sceneCount={currentScript!.scenes.length}
             selectedVoice={selectedVoice}
             onSelectVoice={setSelectedVoice}
             voiceSamples={voiceSamples}
@@ -392,8 +399,8 @@ function App() {
 
         {scriptMutation.data && (
           <ImageGenerationStep
-            sceneCount={scriptMutation.data.scenes.length}
-            imageResult={imageMutation.data}
+            sceneCount={currentScript!.scenes.length}
+            imageResult={mergedImageResult}
             isPending={imageMutation.isPending}
             error={imageMutation.error}
             aspectRatio={aspectRatio}
@@ -413,9 +420,9 @@ function App() {
 
         {imageMutation.data && scriptMutation.data && (
           <VideoRenderStep
-            scriptId={scriptMutation.data.id}
-            scriptTitle={scriptMutation.data.title}
-            sceneCount={scriptMutation.data.scenes.length}
+            scriptId={currentScript!.id}
+            scriptTitle={currentScript!.title}
+            sceneCount={currentScript!.scenes.length}
             videoResult={videoMutation.data}
             isPending={videoMutation.isPending}
             error={videoMutation.error}
@@ -439,10 +446,10 @@ function App() {
 
         {scriptMutation.data && (
           <ScenePreview
-            scenes={scriptMutation.data.scenes}
-            scriptId={scriptMutation.data.id}
+            scenes={currentScript!.scenes}
+            scriptId={currentScript!.id}
             audioResult={audioMutation.data}
-            imageResult={imageMutation.data}
+            imageResult={mergedImageResult}
             imageStatus={imageStatus}
             onRegenerateImage={handleRegenerateImage}
           />

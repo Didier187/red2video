@@ -32,8 +32,15 @@ export interface GeneratedAudio {
   format: 'mp3'
 }
 
+export interface FailedAudio {
+  sceneIndex: number
+  text: string
+  error: string
+}
+
 export interface AudioGenerationResult {
   audios: GeneratedAudio[]
+  failedAudios: FailedAudio[]
   totalScenes: number
 }
 
