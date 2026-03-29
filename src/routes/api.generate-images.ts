@@ -10,7 +10,8 @@ import {
   generateSeeDreamImagesForScenes,
   SeeDreamGenerationResult,
 } from '../agents/seedreamGenerator'
-import { getScript, updateScript } from '../lib/scriptStore'
+import { getScript } from '../lib/scriptStore'
+import { saveImageResults } from '../lib/pipelineHelpers'
 
 type ImageProvider = 'dall-e' | 'seedream'
 
@@ -83,27 +84,11 @@ export const Route = createFileRoute('/api/generate-images')({
             )
           }
 
-          // Update script with image paths for successful images only
-          // Re-fetch script to get latest media state (in case audio was generated during image generation)
-          const latestScript = await getScript(body.scriptId)
-          const existingMedia = latestScript?.media?.scenes || []
-
-          // Build merged media - only update scenes that have successful images
-          const mergedMedia = storedScript.script.scenes.map((_, i) => {
-            const successfulImage = result.images.find((img) => img.sceneIndex === i)
-            return {
-              ...existingMedia[i],
-              ...(successfulImage ? { imagePath: successfulImage.filePath } : {}),
-            }
-          })
-
-          // Only mark as complete if all images were generated successfully
-          const allSuccessful = result.failedImages.length === 0
-
-          await updateScript(body.scriptId, {
-            imagesGenerated: allSuccessful,
-            media: { scenes: mergedMedia },
-          })
+          await saveImageResults(
+            body.scriptId,
+            result,
+            storedScript.script.scenes.length,
+          )
 
           return Response.json(result)
         } catch (error) {

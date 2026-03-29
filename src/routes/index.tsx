@@ -24,6 +24,7 @@ import {
   updateCharacters,
   AnimatedBackground,
   AudioGenerationStep,
+  AutomationPanel,
   CharacterEditor,
   DarkModeToggle,
   Footer,
@@ -351,6 +352,9 @@ function App() {
 
       <div className="relative max-w-4xl mx-auto px-8 py-16">
         <Header />
+
+        <AutomationPanel />
+
         <ProgressSteps getStepStatus={getStepStatus} />
 
         <UrlInputStep

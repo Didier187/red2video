@@ -9,6 +9,8 @@ import type {
   ApiError,
   Voice,
   ImageProvider,
+  AspectRatio,
+  TitleStyle,
   CharacterConfig,
   CharacterDefinition,
 } from './types'
@@ -177,4 +179,71 @@ export function updateCharacters(params: {
     characters: params.characters,
     globalStyle: params.globalStyle,
   })
+}
+
+// ---------------------------------------------------------------------------
+// Automation API
+// ---------------------------------------------------------------------------
+
+export interface AutomateParams {
+  url: string
+  voice?: Voice
+  imageProvider?: ImageProvider
+  aspectRatio?: AspectRatio
+  videoQuality?: 'low' | 'medium' | 'high'
+  uploadToYouTube?: boolean
+  youtubePrivacyStatus?: 'private' | 'unlisted' | 'public'
+  titleStyle?: TitleStyle
+}
+
+export interface AutomateStartResponse {
+  pipelineId: string
+}
+
+export interface PipelineProgressResponse {
+  pipelineId: string
+  stage: string
+  step: number
+  totalSteps: number
+  progress: number
+  message: string
+  error?: string
+  result?: {
+    pipelineId: string
+    scriptId: string
+    videoPath: string
+    metadata: YouTubeMetadata
+    youtubeVideoId?: string
+    youtubeUrl?: string
+  }
+}
+
+export function startAutomation(
+  params: AutomateParams,
+): Promise<AutomateStartResponse> {
+  return postJson<AutomateStartResponse>('/api/automate', params)
+}
+
+export function getAutomationProgress(
+  pipelineId: string,
+): Promise<PipelineProgressResponse> {
+  return apiCall<PipelineProgressResponse>(
+    `/api/automate-progress/${pipelineId}`,
+  )
+}
+
+export interface YouTubeAuthStatus {
+  authorized: boolean
+}
+
+export function getYouTubeAuthStatus(): Promise<YouTubeAuthStatus> {
+  return apiCall<YouTubeAuthStatus>('/api/youtube-auth')
+}
+
+export function startYouTubeAuth(): Promise<{
+  authUrl?: string
+  message: string
+  authorized?: boolean
+}> {
+  return postJson('/api/youtube-auth', {})
 }

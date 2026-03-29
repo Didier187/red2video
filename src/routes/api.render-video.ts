@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { renderVideo, VideoRenderResult } from '../agents/videoRenderer'
+import { renderVideo, type VideoRenderResult } from '../agents/videoRenderer'
 import { getScript, updateScript } from '../lib/scriptStore'
+import { prepareScenesForRendering } from '../lib/pipelineHelpers'
 
 interface VideoRenderRequest {
   scriptId: string
@@ -40,14 +41,7 @@ export const Route = createFileRoute('/api/render-video')({
             )
           }
 
-          // Prepare scenes with media paths and actual audio duration
-          const scenesWithMedia = storedScript.script.scenes.map((scene, i) => ({
-            ...scene,
-            imagePath: storedScript.media?.scenes[i]?.imagePath,
-            audioPath: storedScript.media?.scenes[i]?.audioPath,
-            // Use actual audio duration if available (more accurate than durationHint)
-            duration: storedScript.media?.scenes[i]?.duration,
-          }))
+          const scenesWithMedia = prepareScenesForRendering(storedScript)
 
           const result: VideoRenderResult = await renderVideo({
             scriptId: body.scriptId,
@@ -61,7 +55,6 @@ export const Route = createFileRoute('/api/render-video')({
 
           // Update script with video info
           await updateScript(body.scriptId, {
-            // @ts-expect-error extending StoredScript type
             videoGenerated: true,
             videoPath: result.videoPath,
           })

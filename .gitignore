@@ -15,4 +15,7 @@ todos.json
 .vscode
 .media-store
 .temp-audio
+.youtube-client-secret.json
+.youtube-tokens.json
+.automation.json
 

@@ -1,328 +1,99 @@
-Welcome to your new TanStack app! 
+# red2video
 
-# Getting Started
+Convert Reddit posts into AI-generated short-form videos. Paste a Reddit URL and get a ready-to-upload MP4 with AI voiceover, generated images, and animated captions — in minutes.
 
-To run this application:
+## How It Works
+
+1. **Fetch** — Paste any Reddit post URL to extract the post and top comments
+2. **Script** — Claude AI converts the content into a structured video script with scene-by-scene narration and image prompts
+3. **Characters** — AI extracts character descriptions for visual consistency across scenes
+4. **Audio** — OpenAI TTS generates voiceover for each scene (6 voice options)
+5. **Images** — DALL-E 3 or SeeDream generates an image per scene
+6. **Render** — Remotion renders everything into an MP4 with animated title card, scene transitions, and outro
+7. **Metadata** — Claude generates YouTube-optimized titles, description, and tags
+
+Supports **16:9** (YouTube), **9:16** (Shorts/TikTok/Reels), and **1:1** (Instagram) aspect ratios.
+
+## Prerequisites
+
+- **Node.js** 18+
+- **FFmpeg** — must be installed and available in your `PATH`
+  - macOS: `brew install ffmpeg`
+  - Windows: [ffmpeg.org/download](https://ffmpeg.org/download.html)
+  - Linux: `sudo apt install ffmpeg`
+- API accounts (see [Environment Variables](#environment-variables))
+
+## Quick Start
 
 ```bash
+git clone https://github.com/Didier187/red2video.git
+cd red2video
+cp .env.example .env   # fill in your API keys
 npm install
-npm run dev
+npm run dev            # starts on http://localhost:3000
 ```
 
-# Building For Production
+## Environment Variables
 
-To build this application for production:
+Copy `.env.example` to `.env` and fill in your keys:
 
-```bash
-npm run build
-```
+| Variable | Required | Description |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | Yes | [Anthropic Console](https://console.anthropic.com/) — used for script generation, character extraction, prompt enhancement, and YouTube metadata |
+| `OPENAI_API_KEY` | Yes | [OpenAI Platform](https://platform.openai.com/) — used for TTS audio and DALL-E 3 image generation |
+| `ARK_API_KEY` | No | ByteDance ARK API — required only if you use the **SeeDream** image provider |
 
-## Testing
+## Image Providers
 
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+- **DALL-E 3** (default) — OpenAI's image generation, best quality, requires `OPENAI_API_KEY`
+- **SeeDream** — ByteDance's image model via the ARK API, requires `ARK_API_KEY`
 
-```bash
-npm run test
-```
+You can switch providers per-run in the UI.
 
-## Styling
+## Customizing the Outro Card
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
+The outro card (channel name, social handle) is configured in `.cta.json` at the project root. This file is **not** committed — create it if you want a custom outro:
 
-
-## Linting & Formatting
-
-
-This project uses [eslint](https://eslint.org/) and [prettier](https://prettier.io/) for linting and formatting. Eslint is configured using [tanstack/eslint-config](https://tanstack.com/config/latest/docs/eslint). The following scripts are available:
-
-```bash
-npm run lint
-npm run format
-npm run check
-```
-
-
-## Shadcn
-
-Add components using the latest version of [Shadcn](https://ui.shadcn.com/).
-
-```bash
-pnpm dlx shadcn@latest add button
-```
-
-
-## T3Env
-
-- You can use T3Env to add type safety to your environment variables.
-- Add Environment variables to the `src/env.mjs` file.
-- Use the environment variables in your code.
-
-### Usage
-
-```ts
-import { env } from "@/env";
-
-console.log(env.VITE_APP_TITLE);
-```
-
-
-
-
-
-
-## Routing
-This project uses [TanStack Router](https://tanstack.com/router). The initial setup is a file based router. Which means that the routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add another a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you use the `<Outlet />` component.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { Outlet, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-
-import { Link } from "@tanstack/react-router";
-
-export const Route = createRootRoute({
-  component: () => (
-    <>
-      <header>
-        <nav>
-          <Link to="/">Home</Link>
-          <Link to="/about">About</Link>
-        </nav>
-      </header>
-      <Outlet />
-      <TanStackRouterDevtools />
-    </>
-  ),
-})
-```
-
-The `<TanStackRouterDevtools />` component is not required so you can remove it if you don't want it in your layout.
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-const peopleRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/people",
-  loader: async () => {
-    const response = await fetch("https://swapi.dev/api/people");
-    return response.json() as Promise<{
-      results: {
-        name: string;
-      }[];
-    }>;
-  },
-  component: () => {
-    const data = peopleRoute.useLoaderData();
-    return (
-      <ul>
-        {data.results.map((person) => (
-          <li key={person.name}>{person.name}</li>
-        ))}
-      </ul>
-    );
-  },
-});
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-### React-Query
-
-React-Query is an excellent addition or alternative to route loading and integrating it into you application is a breeze.
-
-First add your dependencies:
-
-```bash
-npm install @tanstack/react-query @tanstack/react-query-devtools
-```
-
-Next we'll need to create a query client and provider. We recommend putting those in `main.tsx`.
-
-```tsx
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-// ...
-
-const queryClient = new QueryClient();
-
-// ...
-
-if (!rootElement.innerHTML) {
-  const root = ReactDOM.createRoot(rootElement);
-
-  root.render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  );
+```json
+{
+  "channelName": "Your Channel",
+  "socialHandle": "@yourhandle"
 }
 ```
 
-You can also add TanStack Query Devtools to the root route (optional).
+If the file doesn't exist, the outro uses generic placeholder text.
 
-```tsx
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-
-const rootRoute = createRootRoute({
-  component: () => (
-    <>
-      <Outlet />
-      <ReactQueryDevtools buttonPosition="top-right" />
-      <TanStackRouterDevtools />
-    </>
-  ),
-});
-```
-
-Now you can use `useQuery` to fetch your data.
-
-```tsx
-import { useQuery } from "@tanstack/react-query";
-
-import "./App.css";
-
-function App() {
-  const { data } = useQuery({
-    queryKey: ["people"],
-    queryFn: () =>
-      fetch("https://swapi.dev/api/people")
-        .then((res) => res.json())
-        .then((data) => data.results as { name: string }[]),
-    initialData: [],
-  });
-
-  return (
-    <div>
-      <ul>
-        {data.map((person) => (
-          <li key={person.name}>{person.name}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-export default App;
-```
-
-You can find out everything you need to know on how to use React-Query in the [React-Query documentation](https://tanstack.com/query/latest/docs/framework/react/overview).
-
-## State Management
-
-Another common requirement for React applications is state management. There are many options for state management in React. TanStack Store provides a great starting point for your project.
-
-First you need to add TanStack Store as a dependency:
+## Scripts
 
 ```bash
-npm install @tanstack/store
+npm run dev       # Start dev server on port 3000
+npm run build     # Build for production
+npm run preview   # Preview production build
+npm run test      # Run tests with Vitest
+npm run check     # Prettier + ESLint fix
 ```
 
-Now let's create a simple counter in the `src/App.tsx` file as a demonstration.
+## Storage
 
-```tsx
-import { useStore } from "@tanstack/react-store";
-import { Store } from "@tanstack/store";
-import "./App.css";
+All generated media is stored locally in hidden directories at the project root:
 
-const countStore = new Store(0);
-
-function App() {
-  const count = useStore(countStore);
-  return (
-    <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
-      </button>
-    </div>
-  );
-}
-
-export default App;
+```
+.script-store/    # JSON script + character config per session
+.media-store/     # Generated audio, images, and rendered video
 ```
 
-One of the many nice features of TanStack Store is the ability to derive state from other state. That derived state will update when the base state updates.
+These are gitignored and can be deleted at any time.
 
-Let's check this out by doubling the count using derived state.
+## Architecture
 
-```tsx
-import { useStore } from "@tanstack/react-store";
-import { Store, Derived } from "@tanstack/store";
-import "./App.css";
+See [ARCHITECTURE.md](ARCHITECTURE.md) for a full system diagram, data flow sequence, component breakdown, and API endpoint reference.
 
-const countStore = new Store(0);
+For AI agent coding guidelines, see [AGENTS.md](AGENTS.md).
 
-const doubledStore = new Derived({
-  fn: () => countStore.state * 2,
-  deps: [countStore],
-});
-doubledStore.mount();
+## Contributing
 
-function App() {
-  const count = useStore(countStore);
-  const doubledCount = useStore(doubledStore);
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-  return (
-    <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
-      </button>
-      <div>Doubled - {doubledCount}</div>
-    </div>
-  );
-}
+## License
 
-export default App;
-```
-
-We use the `Derived` class to create a new store that is derived from another store. The `Derived` class has a `mount` method that will start the derived store updating.
-
-Once we've created the derived store we can use it in the `App` component just like we would any other store using the `useStore` hook.
-
-You can find out everything you need to know on how to use TanStack Store in the [TanStack Store documentation](https://tanstack.com/store/latest).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
+MIT — see [LICENSE](LICENSE).

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiYoutubeAuthRouteImport } from './routes/api.youtube-auth'
 import { Route as ApiUpdateCharactersRouteImport } from './routes/api.update-characters'
 import { Route as ApiRenderVideoRouteImport } from './routes/api.render-video'
 import { Route as ApiRegenerateImageRouteImport } from './routes/api.regenerate-image'
@@ -19,14 +20,21 @@ import { Route as ApiGenerateMetadataRouteImport } from './routes/api.generate-m
 import { Route as ApiGenerateImagesRouteImport } from './routes/api.generate-images'
 import { Route as ApiGenerateAudioRouteImport } from './routes/api.generate-audio'
 import { Route as ApiExtractCharactersRouteImport } from './routes/api.extract-characters'
+import { Route as ApiAutomateRouteImport } from './routes/api.automate'
 import { Route as ApiRenderProgressScriptIdRouteImport } from './routes/api.render-progress.$scriptId'
 import { Route as ApiImageStatusScriptIdRouteImport } from './routes/api.image-status.$scriptId'
+import { Route as ApiAutomateProgressPipelineIdRouteImport } from './routes/api.automate-progress.$pipelineId'
 import { Route as ApiMediaScriptIdVideoFileNameRouteImport } from './routes/api.media.$scriptId.video.$fileName'
 import { Route as ApiMediaScriptIdImagesFileNameRouteImport } from './routes/api.media.$scriptId.images.$fileName'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiYoutubeAuthRoute = ApiYoutubeAuthRouteImport.update({
+  id: '/api/youtube-auth',
+  path: '/api/youtube-auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiUpdateCharactersRoute = ApiUpdateCharactersRouteImport.update({
@@ -74,6 +82,11 @@ const ApiExtractCharactersRoute = ApiExtractCharactersRouteImport.update({
   path: '/api/extract-characters',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAutomateRoute = ApiAutomateRouteImport.update({
+  id: '/api/automate',
+  path: '/api/automate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiRenderProgressScriptIdRoute =
   ApiRenderProgressScriptIdRouteImport.update({
     id: '/api/render-progress/$scriptId',
@@ -85,6 +98,12 @@ const ApiImageStatusScriptIdRoute = ApiImageStatusScriptIdRouteImport.update({
   path: '/api/image-status/$scriptId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAutomateProgressPipelineIdRoute =
+  ApiAutomateProgressPipelineIdRouteImport.update({
+    id: '/api/automate-progress/$pipelineId',
+    path: '/api/automate-progress/$pipelineId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiMediaScriptIdVideoFileNameRoute =
   ApiMediaScriptIdVideoFileNameRouteImport.update({
     id: '/api/media/$scriptId/video/$fileName',
@@ -100,6 +119,7 @@ const ApiMediaScriptIdImagesFileNameRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/automate': typeof ApiAutomateRoute
   '/api/extract-characters': typeof ApiExtractCharactersRoute
   '/api/generate-audio': typeof ApiGenerateAudioRoute
   '/api/generate-images': typeof ApiGenerateImagesRoute
@@ -109,6 +129,8 @@ export interface FileRoutesByFullPath {
   '/api/regenerate-image': typeof ApiRegenerateImageRoute
   '/api/render-video': typeof ApiRenderVideoRoute
   '/api/update-characters': typeof ApiUpdateCharactersRoute
+  '/api/youtube-auth': typeof ApiYoutubeAuthRoute
+  '/api/automate-progress/$pipelineId': typeof ApiAutomateProgressPipelineIdRoute
   '/api/image-status/$scriptId': typeof ApiImageStatusScriptIdRoute
   '/api/render-progress/$scriptId': typeof ApiRenderProgressScriptIdRoute
   '/api/media/$scriptId/images/$fileName': typeof ApiMediaScriptIdImagesFileNameRoute
@@ -116,6 +138,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/automate': typeof ApiAutomateRoute
   '/api/extract-characters': typeof ApiExtractCharactersRoute
   '/api/generate-audio': typeof ApiGenerateAudioRoute
   '/api/generate-images': typeof ApiGenerateImagesRoute
@@ -125,6 +148,8 @@ export interface FileRoutesByTo {
   '/api/regenerate-image': typeof ApiRegenerateImageRoute
   '/api/render-video': typeof ApiRenderVideoRoute
   '/api/update-characters': typeof ApiUpdateCharactersRoute
+  '/api/youtube-auth': typeof ApiYoutubeAuthRoute
+  '/api/automate-progress/$pipelineId': typeof ApiAutomateProgressPipelineIdRoute
   '/api/image-status/$scriptId': typeof ApiImageStatusScriptIdRoute
   '/api/render-progress/$scriptId': typeof ApiRenderProgressScriptIdRoute
   '/api/media/$scriptId/images/$fileName': typeof ApiMediaScriptIdImagesFileNameRoute
@@ -133,6 +158,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/automate': typeof ApiAutomateRoute
   '/api/extract-characters': typeof ApiExtractCharactersRoute
   '/api/generate-audio': typeof ApiGenerateAudioRoute
   '/api/generate-images': typeof ApiGenerateImagesRoute
@@ -142,6 +168,8 @@ export interface FileRoutesById {
   '/api/regenerate-image': typeof ApiRegenerateImageRoute
   '/api/render-video': typeof ApiRenderVideoRoute
   '/api/update-characters': typeof ApiUpdateCharactersRoute
+  '/api/youtube-auth': typeof ApiYoutubeAuthRoute
+  '/api/automate-progress/$pipelineId': typeof ApiAutomateProgressPipelineIdRoute
   '/api/image-status/$scriptId': typeof ApiImageStatusScriptIdRoute
   '/api/render-progress/$scriptId': typeof ApiRenderProgressScriptIdRoute
   '/api/media/$scriptId/images/$fileName': typeof ApiMediaScriptIdImagesFileNameRoute
@@ -151,6 +179,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/api/automate'
     | '/api/extract-characters'
     | '/api/generate-audio'
     | '/api/generate-images'
@@ -160,6 +189,8 @@ export interface FileRouteTypes {
     | '/api/regenerate-image'
     | '/api/render-video'
     | '/api/update-characters'
+    | '/api/youtube-auth'
+    | '/api/automate-progress/$pipelineId'
     | '/api/image-status/$scriptId'
     | '/api/render-progress/$scriptId'
     | '/api/media/$scriptId/images/$fileName'
@@ -167,6 +198,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/api/automate'
     | '/api/extract-characters'
     | '/api/generate-audio'
     | '/api/generate-images'
@@ -176,6 +208,8 @@ export interface FileRouteTypes {
     | '/api/regenerate-image'
     | '/api/render-video'
     | '/api/update-characters'
+    | '/api/youtube-auth'
+    | '/api/automate-progress/$pipelineId'
     | '/api/image-status/$scriptId'
     | '/api/render-progress/$scriptId'
     | '/api/media/$scriptId/images/$fileName'
@@ -183,6 +217,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/api/automate'
     | '/api/extract-characters'
     | '/api/generate-audio'
     | '/api/generate-images'
@@ -192,6 +227,8 @@ export interface FileRouteTypes {
     | '/api/regenerate-image'
     | '/api/render-video'
     | '/api/update-characters'
+    | '/api/youtube-auth'
+    | '/api/automate-progress/$pipelineId'
     | '/api/image-status/$scriptId'
     | '/api/render-progress/$scriptId'
     | '/api/media/$scriptId/images/$fileName'
@@ -200,6 +237,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiAutomateRoute: typeof ApiAutomateRoute
   ApiExtractCharactersRoute: typeof ApiExtractCharactersRoute
   ApiGenerateAudioRoute: typeof ApiGenerateAudioRoute
   ApiGenerateImagesRoute: typeof ApiGenerateImagesRoute
@@ -209,6 +247,8 @@ export interface RootRouteChildren {
   ApiRegenerateImageRoute: typeof ApiRegenerateImageRoute
   ApiRenderVideoRoute: typeof ApiRenderVideoRoute
   ApiUpdateCharactersRoute: typeof ApiUpdateCharactersRoute
+  ApiYoutubeAuthRoute: typeof ApiYoutubeAuthRoute
+  ApiAutomateProgressPipelineIdRoute: typeof ApiAutomateProgressPipelineIdRoute
   ApiImageStatusScriptIdRoute: typeof ApiImageStatusScriptIdRoute
   ApiRenderProgressScriptIdRoute: typeof ApiRenderProgressScriptIdRoute
   ApiMediaScriptIdImagesFileNameRoute: typeof ApiMediaScriptIdImagesFileNameRoute
@@ -222,6 +262,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/youtube-auth': {
+      id: '/api/youtube-auth'
+      path: '/api/youtube-auth'
+      fullPath: '/api/youtube-auth'
+      preLoaderRoute: typeof ApiYoutubeAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/update-characters': {
@@ -287,6 +334,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExtractCharactersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/automate': {
+      id: '/api/automate'
+      path: '/api/automate'
+      fullPath: '/api/automate'
+      preLoaderRoute: typeof ApiAutomateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/render-progress/$scriptId': {
       id: '/api/render-progress/$scriptId'
       path: '/api/render-progress/$scriptId'
@@ -299,6 +353,13 @@ declare module '@tanstack/react-router' {
       path: '/api/image-status/$scriptId'
       fullPath: '/api/image-status/$scriptId'
       preLoaderRoute: typeof ApiImageStatusScriptIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/automate-progress/$pipelineId': {
+      id: '/api/automate-progress/$pipelineId'
+      path: '/api/automate-progress/$pipelineId'
+      fullPath: '/api/automate-progress/$pipelineId'
+      preLoaderRoute: typeof ApiAutomateProgressPipelineIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/media/$scriptId/video/$fileName': {
@@ -320,6 +381,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiAutomateRoute: ApiAutomateRoute,
   ApiExtractCharactersRoute: ApiExtractCharactersRoute,
   ApiGenerateAudioRoute: ApiGenerateAudioRoute,
   ApiGenerateImagesRoute: ApiGenerateImagesRoute,
@@ -329,6 +391,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiRegenerateImageRoute: ApiRegenerateImageRoute,
   ApiRenderVideoRoute: ApiRenderVideoRoute,
   ApiUpdateCharactersRoute: ApiUpdateCharactersRoute,
+  ApiYoutubeAuthRoute: ApiYoutubeAuthRoute,
+  ApiAutomateProgressPipelineIdRoute: ApiAutomateProgressPipelineIdRoute,
   ApiImageStatusScriptIdRoute: ApiImageStatusScriptIdRoute,
   ApiRenderProgressScriptIdRoute: ApiRenderProgressScriptIdRoute,
   ApiMediaScriptIdImagesFileNameRoute: ApiMediaScriptIdImagesFileNameRoute,

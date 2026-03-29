@@ -70,60 +70,64 @@ export const RedditVideo: React.FC<VideoProps> = ({
     return Math.round(sceneDuration * FPS)
   })
 
+  // Build a flat array of Sequence/Transition nodes — TransitionSeries requires
+  // direct children to be Sequence or Transition; wrapping in Fragment breaks it.
+  const seriesChildren: React.ReactNode[] = []
+
+  seriesChildren.push(
+    <TransitionSeries.Sequence key="title" durationInFrames={titleDurationInFrames}>
+      <TitleCard title={title} subtitle="Reddit Story" />
+    </TransitionSeries.Sequence>,
+  )
+
+  scenes.forEach((scene, index) => {
+    const durationInFrames = sceneDurations[index]
+    const isLastScene = index === scenes.length - 1
+
+    seriesChildren.push(
+      <TransitionSeries.Transition
+        key={`t-${index}`}
+        presentation={getTransitionPresentation(index)}
+        timing={springTiming({
+          config: { damping: 200 },
+          durationInFrames: TRANSITION_DURATION_FRAMES,
+        })}
+      />,
+    )
+    seriesChildren.push(
+      <TransitionSeries.Sequence key={`s-${index}`} durationInFrames={durationInFrames}>
+        <Scene
+          text={scene.text}
+          imageDataUrl={scene.imageDataUrl}
+          audioDataUrl={scene.audioDataUrl}
+          durationInFrames={durationInFrames}
+          isLastScene={isLastScene && !showOutro}
+        />
+      </TransitionSeries.Sequence>,
+    )
+  })
+
+  if (showOutro) {
+    seriesChildren.push(
+      <TransitionSeries.Transition
+        key="t-outro"
+        presentation={fade()}
+        timing={springTiming({
+          config: { damping: 200 },
+          durationInFrames: TRANSITION_DURATION_FRAMES,
+        })}
+      />,
+    )
+    seriesChildren.push(
+      <TransitionSeries.Sequence key="outro" durationInFrames={outroDurationInFrames}>
+        <OutroCard channelName={channelName} socialHandle={socialHandle} />
+      </TransitionSeries.Sequence>,
+    )
+  }
+
   return (
     <AbsoluteFill style={{ backgroundColor: '#0a0a0a' }}>
-      <TransitionSeries>
-        {/* Title Card */}
-        <TransitionSeries.Sequence durationInFrames={titleDurationInFrames}>
-          <TitleCard title={title} subtitle="Reddit Story" />
-        </TransitionSeries.Sequence>
-
-        {/* Scenes with transitions */}
-        {scenes.map((scene, index) => {
-          const durationInFrames = sceneDurations[index]
-          const isLastScene = index === scenes.length - 1
-
-          return (
-            <React.Fragment key={index}>
-              <TransitionSeries.Transition
-                presentation={getTransitionPresentation(index)}
-                timing={springTiming({
-                  config: { damping: 200 },
-                  durationInFrames: TRANSITION_DURATION_FRAMES,
-                })}
-              />
-              <TransitionSeries.Sequence durationInFrames={durationInFrames}>
-                <Scene
-                  text={scene.text}
-                  imageDataUrl={scene.imageDataUrl}
-                  audioDataUrl={scene.audioDataUrl}
-                  durationInFrames={durationInFrames}
-                  isLastScene={isLastScene && !showOutro}
-                />
-              </TransitionSeries.Sequence>
-            </React.Fragment>
-          )
-        })}
-
-        {/* Outro Card */}
-        {showOutro && (
-          <>
-            <TransitionSeries.Transition
-              presentation={fade()}
-              timing={springTiming({
-                config: { damping: 200 },
-                durationInFrames: TRANSITION_DURATION_FRAMES,
-              })}
-            />
-            <TransitionSeries.Sequence durationInFrames={outroDurationInFrames}>
-              <OutroCard
-                channelName={channelName}
-                socialHandle={socialHandle}
-              />
-            </TransitionSeries.Sequence>
-          </>
-        )}
-      </TransitionSeries>
+      <TransitionSeries>{seriesChildren}</TransitionSeries>
     </AbsoluteFill>
   )
 }
