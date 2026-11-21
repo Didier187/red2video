@@ -63,6 +63,68 @@ The outro card (channel name, social handle) is configured in `.cta.json` at the
 
 If the file doesn't exist, the outro uses generic placeholder text.
 
+## Automation Pipeline (Autopilot)
+
+The **Autopilot** panel (or `POST /api/automate`) runs every step end to end — fetch, script, characters, audio, images, render, metadata — and can optionally upload the result to YouTube.
+
+### Defaults: `.automation.json`
+
+Optional, gitignored. Values here are used when a request doesn't specify them:
+
+```json
+{
+  "defaults": {
+    "voice": "nova",
+    "imageProvider": "dall-e",
+    "aspectRatio": "16:9",
+    "videoQuality": "medium",
+    "titleStyle": "curiosity"
+  },
+  "youtube": {
+    "privacyStatus": "unlisted",
+    "categoryId": "24",
+    "notifySubscribers": false
+  }
+}
+```
+
+If the file is missing or invalid, the built-in defaults above are used.
+
+### YouTube upload setup (one time)
+
+1. In Google Cloud Console, enable the **YouTube Data API v3** and create an **OAuth client ID** of type *Desktop app*.
+2. The app listens for the OAuth callback on `http://localhost:3333/oauth2callback` (Desktop clients allow this loopback URI automatically; for a *Web* client, add it as an authorized redirect URI).
+3. Download the client JSON and save it as `.youtube-client-secret.json` in the project root (gitignored).
+4. With the dev server running, open **Settings** in the Autopilot panel, turn on the YouTube upload toggle, click **Authorize YouTube** (or `POST /api/youtube-auth`) and complete the consent screen within 5 minutes. Tokens are saved to `.youtube-tokens.json` (gitignored) and refreshed automatically.
+
+`GET /api/youtube-auth` returns `{ "authorized": true | false }`. Custom thumbnails only upload on verified channels; a thumbnail failure doesn't fail the upload.
+
+### API
+
+```bash
+# Dry run: validates the URL, API keys and YouTube auth, and fetches the
+# Reddit post. Makes no paid API calls and starts nothing.
+curl -X POST http://localhost:3000/api/automate \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"https://www.reddit.com/r/.../comments/...","uploadToYouTube":true,"dryRun":true}'
+
+# Real run: returns { "pipelineId" } immediately, or 400 with "problems"
+# if the preflight checks fail (nothing is generated in that case).
+curl -X POST http://localhost:3000/api/automate \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"https://www.reddit.com/r/.../comments/...","uploadToYouTube":false}'
+
+# Poll progress (result is included once stage is "complete")
+curl http://localhost:3000/api/automate-progress/<pipelineId>
+```
+
+Optional body fields: `voice`, `imageProvider`, `aspectRatio`, `videoQuality`, `titleStyle`, `uploadToYouTube`, `youtubePrivacyStatus` (`private` | `unlisted` | `public`).
+
+Notes:
+
+- Progress is kept in memory for 10 minutes after a run ends; restarting the server loses it.
+- Reddit fetches retry on 429/5xx. Uploads are **not** retried automatically (to avoid duplicate videos); if an upload fails, the error includes the rendered video path so you can upload it by hand.
+
 ## Scripts
 
 ```bash
