@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import {
+  preflightPipeline,
   startPipeline,
   type PipelineConfig,
 } from '../lib/pipelineOrchestrator'
@@ -13,6 +14,8 @@ interface AutomateRequest {
   uploadToYouTube?: boolean
   youtubePrivacyStatus?: PipelineConfig['youtubePrivacyStatus']
   titleStyle?: PipelineConfig['titleStyle']
+  /** Validate config and fetch the Reddit post only — no paid API calls. */
+  dryRun?: boolean
 }
 
 export const Route = createFileRoute('/api/automate')({
@@ -29,8 +32,7 @@ export const Route = createFileRoute('/api/automate')({
             )
           }
 
-          // Start pipeline in the background and return immediately
-          const pipelineId = startPipeline({
+          const config: PipelineConfig = {
             redditUrl: body.url,
             voice: body.voice,
             imageProvider: body.imageProvider,
@@ -39,7 +41,28 @@ export const Route = createFileRoute('/api/automate')({
             uploadToYouTube: body.uploadToYouTube,
             youtubePrivacyStatus: body.youtubePrivacyStatus,
             titleStyle: body.titleStyle,
+          }
+
+          const preflight = await preflightPipeline(config, {
+            fetchPost: body.dryRun === true,
           })
+
+          if (body.dryRun) {
+            return Response.json({ dryRun: true, ...preflight })
+          }
+
+          if (!preflight.ok) {
+            return Response.json(
+              {
+                error: `Pipeline not started: ${preflight.problems.join('; ')}`,
+                problems: preflight.problems,
+              },
+              { status: 400 },
+            )
+          }
+
+          // Start pipeline in the background and return immediately
+          const pipelineId = startPipeline(config)
 
           return Response.json({ pipelineId })
         } catch (error) {

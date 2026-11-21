@@ -47,7 +47,10 @@ export async function uploadToYouTube(
     },
   })
 
-  const videoId = response.data.id!
+  const videoId = response.data.id
+  if (!videoId) {
+    throw new Error('YouTube upload returned no video ID')
+  }
   const url = `https://www.youtube.com/watch?v=${videoId}`
 
   console.log(`[youtube-upload] Video uploaded: ${url}`)

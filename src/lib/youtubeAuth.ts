@@ -55,7 +55,7 @@ export async function getAuthenticatedClient(): Promise<OAuth2Client> {
     tokensContent = await fs.readFile(TOKENS_PATH, 'utf-8')
   } catch {
     throw new Error(
-      'YouTube not authorized. Complete the authorization flow first via POST /api/youtube/auth',
+      'YouTube not authorized. Complete the authorization flow first via POST /api/youtube-auth',
     )
   }
 
@@ -108,6 +108,13 @@ export async function authorizeYouTube(): Promise<{
 
   const waitForCallback = () =>
     new Promise<void>((resolve, reject) => {
+      // Timeout after 5 minutes; cleared once the server closes so a
+      // completed flow doesn't keep a pending timer around.
+      const timeout = setTimeout(() => {
+        server.close()
+        reject(new Error('YouTube authorization timed out after 5 minutes'))
+      }, 5 * 60 * 1000)
+
       const server = http.createServer(async (req, res) => {
         try {
           const reqUrl = new URL(req.url!, `http://localhost:${REDIRECT_PORT}`)
@@ -154,17 +161,17 @@ export async function authorizeYouTube(): Promise<{
         }
       })
 
+      server.on('close', () => clearTimeout(timeout))
+      server.on('error', (err) => {
+        clearTimeout(timeout)
+        reject(err)
+      })
+
       server.listen(REDIRECT_PORT, () => {
         console.log(
           `[youtube-auth] Waiting for OAuth callback on port ${REDIRECT_PORT}...`,
         )
       })
-
-      // Timeout after 5 minutes
-      setTimeout(() => {
-        server.close()
-        reject(new Error('YouTube authorization timed out after 5 minutes'))
-      }, 5 * 60 * 1000)
     })
 
   return { authUrl, waitForCallback }

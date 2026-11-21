@@ -1,11 +1,13 @@
 import { randomUUID } from 'crypto'
 import {
   fetchRedditContent,
+  toRedditJsonUrl,
   saveAudioResults,
   saveImageResults,
   prepareScenesForRendering,
 } from './pipelineHelpers'
-import { loadAutomationConfig } from './automationConfig'
+import { loadAutomationConfig, type AutomationConfig } from './automationConfig'
+import { isYouTubeAuthorized } from './youtubeAuth'
 import { generateYouTubeScript } from '../agents/scriptGenerator'
 import {
   extractCharacters,
@@ -110,6 +112,99 @@ function setComplete(pipelineId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Preflight (no paid API calls)
+// ---------------------------------------------------------------------------
+
+export interface ResolvedPipelineSettings {
+  voice: Voice
+  imageProvider: ImageProvider
+  aspectRatio: AspectRatio
+  videoQuality: 'low' | 'medium' | 'high'
+  titleStyle: TitleStyle
+  uploadToYouTube: boolean
+  youtubePrivacyStatus: 'private' | 'unlisted' | 'public'
+}
+
+export interface PreflightResult {
+  ok: boolean
+  problems: string[]
+  settings: ResolvedPipelineSettings
+  post?: { title: string; author: string; commentCount: number }
+}
+
+function resolveSettings(
+  config: PipelineConfig,
+  automationConfig: AutomationConfig,
+): ResolvedPipelineSettings {
+  return {
+    voice: config.voice ?? automationConfig.defaults.voice,
+    imageProvider:
+      config.imageProvider ?? automationConfig.defaults.imageProvider,
+    aspectRatio: config.aspectRatio ?? automationConfig.defaults.aspectRatio,
+    videoQuality:
+      config.videoQuality ?? automationConfig.defaults.videoQuality,
+    titleStyle: config.titleStyle ?? automationConfig.defaults.titleStyle,
+    uploadToYouTube: config.uploadToYouTube ?? false,
+    youtubePrivacyStatus:
+      config.youtubePrivacyStatus ?? automationConfig.youtube.privacyStatus,
+  }
+}
+
+/**
+ * Validate a pipeline config before spending money on generation:
+ * Reddit URL, required API keys, and YouTube authorization (when uploading).
+ * With `fetchPost`, also fetches the Reddit post (free) to confirm it parses.
+ */
+export async function preflightPipeline(
+  config: PipelineConfig,
+  options: { fetchPost?: boolean } = {},
+): Promise<PreflightResult> {
+  const automationConfig = await loadAutomationConfig()
+  const settings = resolveSettings(config, automationConfig)
+  const problems: string[] = []
+
+  let urlValid = true
+  try {
+    toRedditJsonUrl(config.redditUrl)
+  } catch (error) {
+    urlValid = false
+    problems.push(error instanceof Error ? error.message : String(error))
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    problems.push('ANTHROPIC_API_KEY is not set')
+  }
+  if (!process.env.OPENAI_API_KEY) {
+    problems.push('OPENAI_API_KEY is not set')
+  }
+  if (settings.imageProvider === 'seedream' && !process.env.ARK_API_KEY) {
+    problems.push('ARK_API_KEY is not set (required for SeeDream images)')
+  }
+
+  if (settings.uploadToYouTube && !(await isYouTubeAuthorized())) {
+    problems.push(
+      'YouTube is not authorized. Authorize first via POST /api/youtube-auth',
+    )
+  }
+
+  let post: PreflightResult['post']
+  if (options.fetchPost && urlValid) {
+    try {
+      const content = await fetchRedditContent(config.redditUrl)
+      post = {
+        title: content.post.title,
+        author: content.post.author,
+        commentCount: content.comments.length,
+      }
+    } catch (error) {
+      problems.push(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  return { ok: problems.length === 0, problems, settings, post }
+}
+
+// ---------------------------------------------------------------------------
 // Pipeline
 // ---------------------------------------------------------------------------
 
@@ -149,21 +244,25 @@ async function runPipelineWithId(
 ): Promise<PipelineResult> {
   const automationConfig = await loadAutomationConfig()
 
-  const voice = config.voice ?? automationConfig.defaults.voice
-  const imageProvider =
-    config.imageProvider ?? automationConfig.defaults.imageProvider
-  const aspectRatio =
-    config.aspectRatio ?? automationConfig.defaults.aspectRatio
-  const videoQuality =
-    config.videoQuality ?? automationConfig.defaults.videoQuality
-  const titleStyle =
-    config.titleStyle ?? automationConfig.defaults.titleStyle
-  const youtubePrivacy =
-    config.youtubePrivacyStatus ?? automationConfig.youtube.privacyStatus
+  const {
+    voice,
+    imageProvider,
+    aspectRatio,
+    videoQuality,
+    titleStyle,
+    youtubePrivacyStatus: youtubePrivacy,
+  } = resolveSettings(config, automationConfig)
 
   const totalSteps = config.uploadToYouTube ? 8 : 7
 
   try {
+    // Fail fast before any paid API call if the upload can't happen
+    if (config.uploadToYouTube && !(await isYouTubeAuthorized())) {
+      throw new Error(
+        'YouTube is not authorized. Authorize first via POST /api/youtube-auth',
+      )
+    }
+
     // Step 1: Fetch Reddit content
     setProgress(pipelineId, 'fetch', 1, totalSteps, 5, 'Fetching Reddit post...')
     console.log(`[pipeline] Fetching Reddit content: ${config.redditUrl}`)
@@ -263,15 +362,24 @@ async function runPipelineWithId(
 
       const chosenTitle = selectBestTitle(metadata, titleStyle)
 
-      const uploadResult = await uploadToYouTube({
-        videoPath: videoResult.videoPath,
-        title: chosenTitle,
-        description: metadata.description,
-        tags: metadata.tags,
-        privacyStatus: youtubePrivacy,
-        categoryId: automationConfig.youtube.categoryId,
-        thumbnailPath: storedScript.media?.scenes[0]?.imagePath,
-      })
+      let uploadResult: Awaited<ReturnType<typeof uploadToYouTube>>
+      try {
+        uploadResult = await uploadToYouTube({
+          videoPath: videoResult.videoPath,
+          title: chosenTitle,
+          description: metadata.description,
+          tags: metadata.tags,
+          privacyStatus: youtubePrivacy,
+          categoryId: automationConfig.youtube.categoryId,
+          thumbnailPath: storedScript.media?.scenes[0]?.imagePath,
+        })
+      } catch (error) {
+        // Uploads are not retried automatically (risk of duplicate videos);
+        // surface where the rendered video is so it can be uploaded manually.
+        throw new Error(
+          `YouTube upload failed (rendered video kept at ${videoResult.videoPath}, script ${scriptId}): ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
 
       youtubeVideoId = uploadResult.videoId
       youtubeUrl = uploadResult.url
