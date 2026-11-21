@@ -21,7 +21,11 @@ export const Route = createFileRoute('/api/reddit')({
         } catch (error) {
           const message =
             error instanceof Error ? error.message : String(error)
-          const status = message.includes('Reddit API error') ? 502 : 500
+          const status = message.includes('Reddit API error')
+            ? 502
+            : message.includes('must be a Reddit post URL')
+              ? 400
+              : 500
           return Response.json({ error: message }, { status })
         }
       },

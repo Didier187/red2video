@@ -96,31 +96,91 @@ function generatePlainText(post: RedditPostData): string {
   return text
 }
 
-export async function fetchRedditContent(
-  postUrl: string,
-): Promise<ScriptContent> {
-  // Validate it's a Reddit URL
-  const parsedUrl = new URL(postUrl)
+function isRedditHost(hostname: string): boolean {
+  const host = hostname.toLowerCase()
+  return (
+    host === 'reddit.com' || host.endsWith('.reddit.com') || host === 'redd.it'
+  )
+}
+
+/**
+ * Convert a Reddit post URL into its `.json` API URL.
+ * Strips query strings / fragments (e.g. `?utm_source=share`) and expands
+ * `redd.it/<id>` short links. Throws on non-Reddit or malformed URLs.
+ */
+export function toRedditJsonUrl(postUrl: string): string {
+  let parsed: URL
+  try {
+    parsed = new URL(postUrl.trim())
+  } catch {
+    throw new Error('URL must be a Reddit post URL')
+  }
+
   if (
-    !parsedUrl.hostname.includes('reddit.com') &&
-    !parsedUrl.hostname.includes('redd.it')
+    (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') ||
+    !isRedditHost(parsed.hostname)
   ) {
     throw new Error('URL must be a Reddit post URL')
   }
 
-  const jsonUrl = postUrl.replace(/\/?$/, '.json')
+  const pathname = parsed.pathname.replace(/\/+$/, '').replace(/\.json$/, '')
 
-  const response = await fetch(jsonUrl, {
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      Accept: 'application/json',
-      'Accept-Language': 'en-US,en;q=0.9',
-    },
-  })
+  if (parsed.hostname.toLowerCase() === 'redd.it') {
+    const postId = pathname.replace(/^\//, '')
+    if (!/^[a-z0-9]+$/i.test(postId)) {
+      throw new Error('URL must be a Reddit post URL')
+    }
+    return `https://www.reddit.com/comments/${postId}.json`
+  }
 
-  if (!response.ok) {
-    throw new Error(`Reddit API error: ${response.status}`)
+  if (!pathname.includes('/comments/')) {
+    throw new Error('URL must be a Reddit post URL')
+  }
+
+  return `https://${parsed.hostname}${pathname}.json`
+}
+
+const REDDIT_FETCH_RETRIES = 2
+const REDDIT_RETRY_BASE_DELAY_MS = 1000
+
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || status >= 500
+}
+
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+export async function fetchRedditContent(
+  postUrl: string,
+): Promise<ScriptContent> {
+  const jsonUrl = toRedditJsonUrl(postUrl)
+
+  let response: Response | undefined
+  for (let attempt = 0; attempt <= REDDIT_FETCH_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await delay(REDDIT_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1))
+    }
+    try {
+      response = await fetch(jsonUrl, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'application/json',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+      })
+    } catch (error) {
+      if (attempt === REDDIT_FETCH_RETRIES) {
+        throw new Error(
+          `Reddit API error: network failure (${error instanceof Error ? error.message : String(error)})`,
+        )
+      }
+      continue
+    }
+    if (response.ok || !isRetryableStatus(response.status)) break
+  }
+
+  if (!response || !response.ok) {
+    throw new Error(`Reddit API error: ${response?.status ?? 'no response'}`)
   }
 
   const data = await response.json()
