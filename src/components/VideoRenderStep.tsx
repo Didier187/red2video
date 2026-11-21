@@ -111,7 +111,6 @@ function VideoReadySection({ scriptId, videoResult, onDownload }: VideoReadySect
 
 export function VideoRenderStep({
   scriptId,
-  scriptTitle,
   sceneCount,
   videoResult,
   isPending,
